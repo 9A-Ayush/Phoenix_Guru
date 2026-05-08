@@ -54,7 +54,7 @@ class StudentDashboard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Good Morning 🌤', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
+              Text(_getGreeting(), style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
             ]),
             CircleAvatar(radius: 22, backgroundColor: AppColors.primary,
@@ -145,6 +145,15 @@ class StudentDashboard extends StatelessWidget {
       ),
     );
   }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning 🌤';
+    if (hour < 17) return 'Good Afternoon ☀️';
+    if (hour < 21) return 'Good Evening 🌆';
+    return 'Good Night 🌙';
+  }
+
   IconData _sIcon(String s) {
     if (s.toLowerCase().contains('physics')) return Symbols.science;
     if (s.toLowerCase().contains('math')) return Symbols.calculate;

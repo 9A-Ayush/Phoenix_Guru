@@ -44,6 +44,16 @@ class _TeacherShellState extends State<TeacherShell> {
   }
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+String _getGreeting() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good Morning 🌤';
+  if (hour < 17) return 'Good Afternoon ☀️';
+  if (hour < 21) return 'Good Evening 🌆';
+  return 'Good Night 🌙';
+}
+
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 class TeacherDashboard extends StatelessWidget {
@@ -65,7 +75,7 @@ class TeacherDashboard extends StatelessWidget {
           // Top bar
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Good Morning 🌤', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
+              Text(_getGreeting(), style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
             ]),
             Row(children: [

@@ -41,8 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final err = await state.login(_emailCtrl.text.trim(), _passCtrl.text, _role);
     if (!mounted) return;
     if (err != null) { setState(() => _error = err); return; }
+    // Use server-side role from AppState (not local _role) for navigation consistency.
+    final isTeacher = state.currentUser!.role == UserRole.teacher;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => _role == UserRole.teacher ? const TeacherShell() : const StudentShell()),
+      MaterialPageRoute(builder: (_) => isTeacher ? const TeacherShell() : const StudentShell()),
       (_) => false,
     );
   }

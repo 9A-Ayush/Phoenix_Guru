@@ -1,25 +1,50 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models.dart';
 
+/// Tracks where we are in the auth lifecycle.
+/// [unknown] → app just started, haven't checked yet
+/// [checking] → actively fetching auth state + user profile
+/// [authenticated] → user is logged in and profile is loaded
+/// [unauthenticated] → no user session
+enum AuthStatus { unknown, checking, authenticated, unauthenticated }
+
 class AppState extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  // ── Auth state ────────────────────────────────────────────────────────────
+  AuthStatus _authStatus = AuthStatus.unknown;
   UserModel? _currentUser;
+  bool _isLoading = false; // only for data operations (create class, etc.)
+
+  // Completer that resolves once the initial auth check is done.
+  // Splash screen awaits this before navigating.
+  final Completer<void> _initCompleter = Completer<void>();
+
+  // ── Data state ────────────────────────────────────────────────────────────
   List<ClassModel> _classes = [];
   List<TestModel> _tests = [];
   List<QuizAttempt> _attempts = [];
-  bool _isLoading = false;
+  StreamSubscription? _classesSub;
+  StreamSubscription? _testsSub;
+  StreamSubscription? _attemptsSub;
 
+  // ── Getters ───────────────────────────────────────────────────────────────
+  AuthStatus get authStatus => _authStatus;
   UserModel? get currentUser => _currentUser;
-  bool get isLoggedIn => _currentUser != null;
+  bool get isLoggedIn => _authStatus == AuthStatus.authenticated && _currentUser != null;
   bool get isLoading => _isLoading;
   bool get isTeacher => _currentUser?.role == UserRole.teacher;
   bool get isStudent => _currentUser?.role == UserRole.student;
+
+  /// Resolves when the initial auth check is complete.
+  /// Splash screen should `await` this.
+  Future<void> get initialized => _initCompleter.future;
 
   List<ClassModel> get allClasses => List.unmodifiable(_classes);
   List<ClassModel> get myClasses {
@@ -33,42 +58,129 @@ class AppState extends ChangeNotifier {
   List<QuizAttempt> get myAttempts => _currentUser == null ? [] : _attempts.where((a) => a.userId == _currentUser!.id).toList();
   List<QuizAttempt> attemptsForTest(String testId) => _attempts.where((a) => a.testId == testId).toList();
 
+  // ── Constructor ───────────────────────────────────────────────────────────
+
   AppState() {
-    _auth.authStateChanges().listen((user) async {
-      if (user != null) {
-        final doc = await _firestore.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          _currentUser = UserModel.fromMap(doc.data()!);
-          _initStreams();
-        }
-      } else {
-        _currentUser = null;
-        _classes.clear();
-        _tests.clear();
-        _attempts.clear();
-      }
-      notifyListeners();
-    });
+    _initialize();
   }
 
+  /// One-time startup: check if there's already a Firebase Auth session,
+  /// load the user profile, then set up ongoing listeners.
+  Future<void> _initialize() async {
+    _authStatus = AuthStatus.checking;
+    // Don't notify yet — splash screen is awaiting the completer.
+
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) {
+        // There IS an existing session — load the profile from Firestore.
+        final loaded = await _loadUserProfile(firebaseUser.uid);
+        if (loaded) {
+          _authStatus = AuthStatus.authenticated;
+          _initStreams();
+        } else {
+          // Profile doc missing in Firestore — sign out the orphan session.
+          await _auth.signOut();
+          _authStatus = AuthStatus.unauthenticated;
+        }
+      } else {
+        _authStatus = AuthStatus.unauthenticated;
+      }
+    } catch (e) {
+      // Network error, Firestore unavailable, etc.
+      // Fail gracefully — send to login so user can retry.
+      debugPrint('AppState init error: $e');
+      _authStatus = AuthStatus.unauthenticated;
+    }
+
+    // Signal that init is done.
+    if (!_initCompleter.isCompleted) _initCompleter.complete();
+    notifyListeners();
+
+    // Set up ongoing listener for future auth changes (logout, token refresh).
+    // Skip(1) because we already handled the current state above.
+    _auth.authStateChanges().skip(1).listen(_onAuthChanged);
+  }
+
+  /// Loads user profile from Firestore. Returns true if found.
+  Future<bool> _loadUserProfile(String uid) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get()
+          .timeout(const Duration(seconds: 8));
+      if (doc.exists && doc.data() != null) {
+        _currentUser = UserModel.fromMap(doc.data()!);
+        return true;
+      }
+      return false;
+    } on TimeoutException {
+      debugPrint('Firestore user profile fetch timed out');
+      return false;
+    } catch (e) {
+      debugPrint('Error loading user profile: $e');
+      return false;
+    }
+  }
+
+  /// Handles auth state changes AFTER initial boot (e.g. logout from another device).
+  Future<void> _onAuthChanged(User? user) async {
+    if (user != null) {
+      // User signed in elsewhere or token refreshed.
+      if (_currentUser == null) {
+        _authStatus = AuthStatus.checking;
+        notifyListeners();
+        final loaded = await _loadUserProfile(user.uid);
+        if (loaded) {
+          _authStatus = AuthStatus.authenticated;
+          _initStreams();
+        } else {
+          await _auth.signOut();
+          _authStatus = AuthStatus.unauthenticated;
+        }
+        notifyListeners();
+      }
+    } else {
+      // User signed out.
+      _currentUser = null;
+      _authStatus = AuthStatus.unauthenticated;
+      _cancelStreams();
+      _classes.clear();
+      _tests.clear();
+      _attempts.clear();
+      notifyListeners();
+    }
+  }
+
+  // ── Firestore Streams ─────────────────────────────────────────────────────
+
   void _initStreams() {
-    // Listen to classes
-    _firestore.collection('classes').snapshots().listen((snapshot) {
+    _cancelStreams(); // Prevent duplicate listeners.
+
+    _classesSub = _firestore.collection('classes').snapshots().listen((snapshot) {
       _classes = snapshot.docs.map((doc) => ClassModel.fromMap(doc.data())).toList();
       notifyListeners();
     });
 
-    // Listen to tests
-    _firestore.collection('tests').snapshots().listen((snapshot) {
+    _testsSub = _firestore.collection('tests').snapshots().listen((snapshot) {
       _tests = snapshot.docs.map((doc) => TestModel.fromMap(doc.data())).toList();
       notifyListeners();
     });
 
-    // Listen to attempts
-    _firestore.collection('attempts').snapshots().listen((snapshot) {
+    _attemptsSub = _firestore.collection('attempts').snapshots().listen((snapshot) {
       _attempts = snapshot.docs.map((doc) => QuizAttempt.fromMap(doc.data())).toList();
       notifyListeners();
     });
+  }
+
+  void _cancelStreams() {
+    _classesSub?.cancel();
+    _testsSub?.cancel();
+    _attemptsSub?.cancel();
+    _classesSub = null;
+    _testsSub = null;
+    _attemptsSub = null;
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -77,23 +189,25 @@ class AppState extends ChangeNotifier {
     _isLoading = true; notifyListeners();
     try {
       final credential = await _auth.signInWithEmailAndPassword(email: email, password: password);
-      final doc = await _firestore.collection('users').doc(credential.user!.uid).get();
-      if (!doc.exists) {
+      final loaded = await _loadUserProfile(credential.user!.uid);
+      if (!loaded) {
         await _auth.signOut();
         _isLoading = false; notifyListeners();
         return 'User data not found';
       }
-      _currentUser = UserModel.fromMap(doc.data()!);
       if (_currentUser!.role != role) {
+        _currentUser = null;
         await _auth.signOut();
         _isLoading = false; notifyListeners();
         return 'Incorrect role selected';
       }
+      _authStatus = AuthStatus.authenticated;
+      _initStreams();
       _isLoading = false; notifyListeners();
       return null;
     } catch (e) {
       _isLoading = false; notifyListeners();
-      return e.toString();
+      return _friendlyAuthError(e);
     }
   }
 
@@ -103,11 +217,13 @@ class AppState extends ChangeNotifier {
       final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       _currentUser = UserModel(id: credential.user!.uid, name: name, email: email, role: role);
       await _firestore.collection('users').doc(credential.user!.uid).set(_currentUser!.toMap());
+      _authStatus = AuthStatus.authenticated;
+      _initStreams();
       _isLoading = false; notifyListeners();
       return null;
     } catch (e) {
       _isLoading = false; notifyListeners();
-      return e.toString();
+      return _friendlyAuthError(e);
     }
   }
 
@@ -116,12 +232,36 @@ class AppState extends ChangeNotifier {
       await _auth.sendPasswordResetEmail(email: email);
       return null;
     } catch (e) {
-      return e.toString();
+      return _friendlyAuthError(e);
     }
   }
 
   Future<void> logout() async {
+    _cancelStreams();
+    _currentUser = null;
+    _authStatus = AuthStatus.unauthenticated;
+    _classes.clear();
+    _tests.clear();
+    _attempts.clear();
+    notifyListeners();
     await _auth.signOut();
+  }
+
+  /// Converts Firebase exceptions into user-friendly messages.
+  String _friendlyAuthError(dynamic e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'user-not-found': return 'No account found with this email';
+        case 'wrong-password': return 'Incorrect password';
+        case 'email-already-in-use': return 'Email already registered';
+        case 'weak-password': return 'Password is too weak';
+        case 'invalid-email': return 'Invalid email address';
+        case 'too-many-requests': return 'Too many attempts. Try again later';
+        case 'network-request-failed': return 'Network error. Check your connection';
+        default: return e.message ?? 'Authentication failed';
+      }
+    }
+    return e.toString();
   }
 
   // ── Classes ───────────────────────────────────────────────────────────────
@@ -219,5 +359,11 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  @override
+  void dispose() {
+    _cancelStreams();
+    super.dispose();
   }
 }

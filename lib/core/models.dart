@@ -10,17 +10,26 @@ class UserModel {
   final String email;
   final UserRole role;
   final String avatarInitials;
+  final DateTime createdAt;
 
   UserModel({
     String? id,
     required this.name,
     required this.email,
     required this.role,
+    DateTime? createdAt,
   })  : id = id ?? _uuid.v4(),
+        createdAt = createdAt ?? DateTime.now(),
         avatarInitials = name.split(' ').take(2).map((w) => w[0].toUpperCase()).join();
 
   UserModel copyWith({String? name, String? email, UserRole? role}) {
-    return UserModel(id: id, name: name ?? this.name, email: email ?? this.email, role: role ?? this.role);
+    return UserModel(
+      id: id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      createdAt: createdAt,
+    );
   }
 
   Map<String, dynamic> toMap() {
@@ -29,6 +38,7 @@ class UserModel {
       'name': name,
       'email': email,
       'role': role.name,
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
@@ -38,6 +48,9 @@ class UserModel {
       name: map['name'],
       email: map['email'],
       role: UserRole.values.byName(map['role']),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
     );
   }
 }
@@ -220,7 +233,7 @@ class QuizAttempt {
   int totalParticipants = 0;
 
   String get grade {
-    final s = 0.0; // computed externally
+    const s = 0.0; // computed externally
     if (s >= 0.9) return 'A+';
     if (s >= 0.8) return 'A';
     if (s >= 0.7) return 'B';

@@ -46,3 +46,18 @@ ios/Pods/
 ios/.symlinks/
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
+
+# Graphify
+graphify-out/
+.graphifyignore
+
+# Agent
+.agent/
+
+# Gemini API & secrets
+.env
+.env.*
+gemini_api_key.txt
+gemini_config.json
+**/secrets.dart
+**/api_keys.dart

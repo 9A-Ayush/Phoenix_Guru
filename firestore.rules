@@ -1,45 +1,50 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
 
-    // User profiles
+    // ── Users ──────────────────────────────────────────────────────────────
+    // Each user can only read and write their own document.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Classes
+    // ── Classes ────────────────────────────────────────────────────────────
+    // Any authenticated user can read classes.
+    // Only teachers (role == 'teacher') can create/update classes.
     match /classes/{classId} {
-      allow read: if isAuthenticated() && (
-        resource.data.teacherId == request.auth.uid || 
-        request.auth.uid in resource.data.studentIds
-      );
-      allow create: if isAuthenticated() && getUserData().role == 'teacher';
-      allow update: if isAuthenticated() && (
-        resource.data.teacherId == request.auth.uid || 
-        (getUserData().role == 'student' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']))
-      );
-      allow delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      allow update: if request.auth != null
+                    && (
+                      // Teacher who owns the class can update it
+                      resource.data.teacherId == request.auth.uid
+                      ||
+                      // Students can update only the studentIds field (join class)
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds'])
+                    );
+      allow delete: if request.auth != null
+                    && resource.data.teacherId == request.auth.uid;
     }
 
-    // Tests
+    // ── Tests ──────────────────────────────────────────────────────────────
+    // Any authenticated user can read tests.
+    // Only the owning teacher can create/update/delete.
     match /tests/{testId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated() && getUserData().role == 'teacher';
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
-    // Attempts
+    // ── Attempts ───────────────────────────────────────────────────────────
+    // Users can read all attempts (for leaderboards).
+    // Users can only create/update their own attempt.
     match /attempts/{attemptId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+                             && resource.data.userId == request.auth.uid;
     }
   }
 }

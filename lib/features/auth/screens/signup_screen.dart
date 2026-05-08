@@ -35,8 +35,11 @@ class _SignupScreenState extends State<SignupScreen> {
     final err = await context.read<AppState>().signUp(_nameCtrl.text.trim(), _emailCtrl.text.trim(), _passCtrl.text, _role);
     if (!mounted) return;
     if (err != null) { setState(() => _error = err); return; }
+    // Use server-side role from AppState for navigation consistency.
+    final state = context.read<AppState>();
+    final isTeacher = state.currentUser!.role == UserRole.teacher;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => _role == UserRole.teacher ? const TeacherShell() : const StudentShell()),
+      MaterialPageRoute(builder: (_) => isTeacher ? const TeacherShell() : const StudentShell()),
       (_) => false,
     );
   }

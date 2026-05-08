@@ -25,19 +25,37 @@ class _SplashScreenState extends State<SplashScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
-    Future.delayed(const Duration(milliseconds: 2800), _navigate);
+    _waitAndNavigate();
+  }
+
+  Future<void> _waitAndNavigate() async {
+    final state = context.read<AppState>();
+
+    // Run splash animation AND auth initialization in parallel.
+    // Splash shows for at least 2.4s (for the animation to play),
+    // but waits longer if auth init hasn't finished yet.
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 2400)),
+      state.initialized.timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          // If init takes >8s, give up and go to login.
+          debugPrint('Auth initialization timed out');
+        },
+      ),
+    ]);
+
+    if (!mounted) return;
+    _navigate();
   }
 
   void _navigate() {
-    if (!mounted) return;
     final state = context.read<AppState>();
     Widget next;
-    if (!state.isLoggedIn) {
-      next = const LoginScreen();
-    } else if (state.isTeacher) {
-      next = const TeacherShell();
+    if (state.authStatus == AuthStatus.authenticated && state.currentUser != null) {
+      next = state.isTeacher ? const TeacherShell() : const StudentShell();
     } else {
-      next = const StudentShell();
+      next = const LoginScreen();
     }
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(

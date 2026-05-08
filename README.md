@@ -1,7 +1,8 @@
 # Phoenix Guru — Flutter Education App
 
-**Design Source:** Pencil.dev MCP (22 screens pixel-matched)  
-**Stack:** Flutter + Provider + Google Fonts + Material Symbols + flutter_animate
+A full-stack Flutter education platform for teachers and students, featuring live quizzes, class management, test creation, and real-time leaderboards.
+
+**Stack:** Flutter · Provider · Firebase (Auth + Firestore + Storage) · Google Fonts · Material Symbols · flutter_animate
 
 ---
 
@@ -9,35 +10,106 @@
 
 ```
 lib/
-├── main.dart
+├── main.dart                          # App entry, ChangeNotifierProvider setup
 ├── core/
-│   ├── models.dart              # UserModel, ClassModel, TestModel, QuizAttempt, QuizQuestion
+│   ├── models.dart                    # UserModel, ClassModel, TestModel, QuizQuestion, QuizAttempt
 │   ├── providers/
-│   │   └── app_state.dart       # ChangeNotifier — auth, classes, tests, attempts
+│   │   └── app_state.dart             # Central ChangeNotifier — auth, classes, tests, attempts
 │   └── theme/
-│       └── app_theme.dart       # AppColors + AppTheme (dark)
-├── shared/widgets/
-│   └── widgets.dart             # AppInput, AppButton, StatCard, Tab bars, etc.
+│       └── app_theme.dart             # AppColors + AppTheme (dark)
+├── shared/
+│   └── widgets/
+│       └── widgets.dart               # AppInput, AppButton, GlowBg, ClassListTile, StatCard, etc.
 └── features/
-    ├── auth/screens/
-    │   ├── splash_screen.dart
-    │   ├── login_screen.dart
-    │   ├── signup_screen.dart
-    │   └── forgot_password_screen.dart
+    ├── auth/
+    │   └── screens/
+    │       ├── splash_screen.dart     # Animated logo, auto-navigate on auth state
+    │       ├── login_screen.dart      # Role selector, email/password, forgot password
+    │       ├── signup_screen.dart     # Full name, email, password, role
+    │       └── forgot_password_screen.dart
     ├── student/
-    │   ├── screens/student_shell.dart   # Dashboard + Classes + Material + Profile
-    │   └── quiz/quiz_screens.dart       # TestAttempt + TestResult + QuizResultsList
-    └── teacher/screens/
-        ├── teacher_shell.dart           # Dashboard + Classes + Tests + Profile
-        ├── create_class_screen.dart     # T06 pixel-perfect
-        ├── create_test_screen.dart      # T03
-        └── class_detail_screen.dart    # T02
+    │   ├── screens/
+    │   │   └── student_shell.dart     # Dashboard · Classes · Material · Quiz · Profile
+    │   └── quiz/
+    │       ├── live_quiz_screens.dart # Join PIN · ABCD answer cards · Leaderboard
+    │       └── quiz_screens.dart      # TestAttempt · TestResult · QuizResultsList
+    └── teacher/
+        └── screens/
+            ├── teacher_shell.dart         # Dashboard · Classes · Tests · Profile
+            ├── create_class_screen.dart   # Subject dropdown, description, validation
+            ├── create_test_screen.dart    # Question builder with add/edit dialog
+            ├── class_detail_screen.dart   # Students · Tests · Material tabs
+            ├── live_quiz_host_screen.dart # Real-time answer distribution, student list
+            └── test_results_screen.dart   # Score breakdown, grade bars, flagged items
 ```
 
-## Design Token Reference (from MCP)
+---
+
+## Architecture
+
+```
+Firebase Auth
+     │
+     ▼
+  AppState (ChangeNotifier)
+     │  ├── currentUser: UserModel?
+     │  ├── classes:     List<ClassModel>
+     │  ├── tests:       List<TestModel>
+     │  └── attempts:    List<QuizAttempt>
+     │
+     ├── Firestore real-time streams (_initStreams)
+     │     ├── /users/{uid}
+     │     ├── /classes
+     │     ├── /tests
+     │     └── /attempts
+     │
+     └── Provider.of<AppState> → Screens → Widgets
+```
+
+- **State Management:** Provider (`ChangeNotifier`)
+- **Navigation:** Flutter Navigator 1.0 (`MaterialPageRoute`)
+- **Backend:** Firebase — Auth, Firestore, Storage
+- **Animations:** `flutter_animate` (fade, slide, scale, stagger)
+- **Fonts:** Poppins (primary), Inter (status/labels)
+
+---
+
+## Firestore Collections
+
+| Collection | Document Key | Description |
+|---|---|---|
+| `users` | `{uid}` | User profile — name, email, role, createdAt |
+| `classes` | `{classId}` | Class info — teacherId, classCode, studentIds |
+| `tests` | `{testId}` | Test — questions, duration, classId, isLive |
+| `attempts` | `{attemptId}` | Quiz attempt — userId, answers, score, completedAt |
+
+### UserModel fields
+```
+id          String   Firebase Auth UID
+name        String   Full name
+email       String   Email address
+role        String   "student" | "teacher"
+createdAt   String   ISO-8601 timestamp
+```
+
+---
+
+## Data Models (`lib/core/models.dart`)
+
+| Model | Key Fields |
+|---|---|
+| `UserModel` | id, name, email, role, createdAt, avatarInitials |
+| `ClassModel` | id, name, subject, teacherId, classCode, studentIds, createdAt |
+| `TestModel` | id, title, classId, questions, durationMinutes, isLive, scheduledAt |
+| `QuizQuestion` | id, question, options\[4\], correctIndex |
+| `QuizAttempt` | id, testId, userId, answers (Map), completedAt |
+
+---
+
+## Design Tokens
 
 | Token | Value |
-|-------|-------|
+|---|---|
 | Background | `#0A0A1A` |
 | Surface | `#13132B` |
 | Surface2 | `#1C1C3A` |
@@ -47,51 +119,106 @@ lib/
 | Warning | `#FBBF24` |
 | Error | `#EF4444` |
 | Accent | `#FF6B6B` |
-| Font | Poppins (main), Inter (status bar) |
+| Font | Poppins (main) · Inter (labels) |
+
+---
+
+## Screens (22 total)
+
+### Auth
+| # | Screen | File |
+|---|---|---|
+| 01 | Splash — logo scale + fade | `auth/screens/splash_screen.dart` |
+| 02 | Login — role selector, validation | `auth/screens/login_screen.dart` |
+| 03 | Sign Up — name/email/password + role | `auth/screens/signup_screen.dart` |
+| 04 | Forgot Password — email + success state | `auth/screens/forgot_password_screen.dart` |
+
+### Student Module
+| # | Screen | File |
+|---|---|---|
+| 05 | Dashboard — live banner, stats, classes | `student/screens/student_shell.dart` |
+| 06 | My Classes — list + join bottom sheet | `student/screens/student_shell.dart` |
+| 07 | Join Class — 6-digit OTP code input | `student/screens/student_shell.dart` |
+| 08 | Study Material — filter tabs, files | `student/screens/student_shell.dart` |
+| 09 | Tests — upcoming / done tabs | `student/screens/student_shell.dart` |
+| 10 | Join Live Quiz — PIN entry | `student/quiz/live_quiz_screens.dart` |
+| 11 | Live Quiz ABCD — colorful answer cards | `student/quiz/live_quiz_screens.dart` |
+| 12 | Test Taking — progress bar, MCQ | `student/quiz/quiz_screens.dart` |
+| 13 | Profile — stats, menu, quiz history | `student/screens/student_shell.dart` |
+| 14 | Quiz Leaderboard — podium UI | `student/quiz/live_quiz_screens.dart` |
+| 15 | Quiz Results List — grade badges | `student/quiz/quiz_screens.dart` |
+
+### Teacher Module
+| # | Screen | File |
+|---|---|---|
+| T01 | Teacher Dashboard — quick actions, stats | `teacher/screens/teacher_shell.dart` |
+| T02 | Class Detail — students/tests/material tabs | `teacher/screens/class_detail_screen.dart` |
+| T03 | Create Test — question builder dialog | `teacher/screens/create_test_screen.dart` |
+| T04 | Live Quiz Host — real-time answer distribution | `teacher/screens/live_quiz_host_screen.dart` |
+| T05 | Test Results — scores, grade bars, flagged | `teacher/screens/test_results_screen.dart` |
+| T06 | Create Class — subject dropdown, validation | `teacher/screens/create_class_screen.dart` |
+
+---
 
 ## Setup
+
+### Prerequisites
+- Flutter 3.22+
+- Dart 3.3+
+- Firebase project with Firestore, Auth, and Storage enabled
+
+### Install & Run
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-**Min Flutter:** 3.22+  
-**Min Dart:** 3.3+
+### Firebase Setup
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable **Authentication** (Email/Password)
+3. Enable **Firestore Database** (production mode)
+4. Enable **Firebase Storage**
+5. Add `google-services.json` → `android/app/`
+6. Add `GoogleService-Info.plist` → `ios/Runner/`
+7. Deploy Firestore rules and indexes:
 
-## Screens Implemented (22 MCP screens)
+```bash
+firebase deploy --only firestore --project <your-project-id>
+```
 
-### Auth
-- `01` Splash — logo scale + fade animation
-- `02` Login — role selector (Student/Teacher), validation
-- `03` Sign Up — full name/email/password + role
-- `04` Forgot Password — email input + success state
+### Dependencies
 
-### Student Module  
-- `05` Dashboard — live quiz banner, stats, classes, upcoming tests
-- `06` My Classes — list + join class bottom sheet (OTP-style code input)
-- `07` Join Class — 6-digit code entry with class preview
-- `08` Study Material — filter tabs, downloadable files
-- `09` Tests — upcoming/done tabs
-- `10` Join Live Quiz — PIN entry
-- `11` Live Quiz ABCD — colorful answer cards
-- `12` Test Taking — progress bar, anti-cheat banner, MCQ
-- `13` Profile — stats, menu rows, quiz results
-- `14` Quiz Leaderboard (podium UI)
-- `15` Quiz Results List — grade badges, progress bars
+| Package | Version | Purpose |
+|---|---|---|
+| `firebase_core` | ^2.27.0 | Firebase initialization |
+| `firebase_auth` | ^4.20.0 | Authentication |
+| `cloud_firestore` | ^4.17.0 | Real-time database |
+| `firebase_storage` | ^11.7.0 | File uploads |
+| `provider` | ^6.1.2 | State management |
+| `google_fonts` | ^6.2.1 | Poppins / Inter fonts |
+| `flutter_animate` | ^4.5.0 | Animations |
+| `material_symbols_icons` | ^4.2792.2 | Icon set |
+| `go_router` | ^14.2.7 | Routing |
+| `uuid` | ^4.4.2 | ID generation |
+| `intl` | ^0.19.0 | Date formatting |
+| `shared_preferences` | ^2.3.2 | Local storage |
 
-### Teacher Module
-- `T01` Teacher Dashboard — quick actions, stats
-- `T02` Class Detail — students/tests/material tabs
-- `T03` Create Test — question builder with dialog
-- `T04` Live Quiz Host — answer distribution view
-- `T05` Test Results — student scores, flagged items
-- `T06` Create Class — **full validation, subject dropdown, description**
+---
 
-## Architecture
+## Key Flows
 
-- **State Management:** Provider (ChangeNotifier)
-- **Navigation:** Flutter Navigator 1.0 (MaterialPageRoute)
-- **Data Layer:** In-memory AppState (backend-ready structure)
-- **Animations:** flutter_animate (fade, slide, scale, stagger)
-- **Clean separation:** models → providers → screens → widgets
+### Sign Up
+`SignupScreen` → `AppState.signUp()` → Firebase Auth creates user → Firestore `users/{uid}` document written → `_initStreams()` starts → navigate to shell
+
+### Login
+`LoginScreen` → `AppState.login()` → Firebase Auth → Firestore `users/{uid}` fetched → role validated → navigate to `TeacherShell` or `StudentShell`
+
+### Create Class (Teacher)
+`CreateClassScreen` → `AppState.createClass()` → Firestore `classes/{id}` written → real-time stream updates UI
+
+### Join Class (Student)
+`_JoinClassSheet` → `AppState.joinClass(code)` → Firestore query by `classCode` → `studentIds` array updated
+
+### Live Quiz
+Teacher starts from `TeacherLiveQuizScreen` → sets `isLive: true` on test → students join via PIN in `JoinLiveQuizScreen` → real-time Firestore sync → leaderboard on `QuizLeaderboardScreen`
