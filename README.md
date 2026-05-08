@@ -19,13 +19,14 @@ lib/
 │       └── app_theme.dart             # AppColors + AppTheme (dark)
 ├── shared/
 │   └── widgets/
-│       └── widgets.dart               # AppInput, AppButton, GlowBg, ClassListTile, StatCard, etc.
+│       └── widgets.dart               # AppInput, AppButton, GoogleSignInButton, GlowBg, ClassListTile, StatCard, etc.
 └── features/
     ├── auth/
     │   └── screens/
     │       ├── splash_screen.dart     # Animated logo, auto-navigate on auth state
-    │       ├── login_screen.dart      # Role selector, email/password, forgot password
-    │       ├── signup_screen.dart     # Full name, email, password, role
+    │       ├── login_screen.dart      # Role selector, email/password, Google Sign-In
+    │       ├── signup_screen.dart     # Full name, email, password, role, Google Sign-In
+    │       ├── role_picker_screen.dart # Google new-user role selection (Student/Teacher)
     │       └── forgot_password_screen.dart
     ├── student/
     │   ├── screens/
@@ -48,10 +49,11 @@ lib/
 ## Architecture
 
 ```
-Firebase Auth
+Firebase Auth (Email/Password + Google Sign-In)
      │
      ▼
   AppState (ChangeNotifier)
+     │  ├── authStatus:  AuthStatus (unknown|checking|authenticated|needsRolePicker|unauthenticated)
      │  ├── currentUser: UserModel?
      │  ├── classes:     List<ClassModel>
      │  ├── tests:       List<TestModel>
@@ -129,9 +131,10 @@ createdAt   String   ISO-8601 timestamp
 | # | Screen | File |
 |---|---|---|
 | 01 | Splash — logo scale + fade | `auth/screens/splash_screen.dart` |
-| 02 | Login — role selector, validation | `auth/screens/login_screen.dart` |
-| 03 | Sign Up — name/email/password + role | `auth/screens/signup_screen.dart` |
+| 02 | Login — role selector, Google Sign-In | `auth/screens/login_screen.dart` |
+| 03 | Sign Up — name/email/password + role, Google Sign-In | `auth/screens/signup_screen.dart` |
 | 04 | Forgot Password — email + success state | `auth/screens/forgot_password_screen.dart` |
+| 05 | Role Picker — Google new-user role selection | `auth/screens/role_picker_screen.dart` |
 
 ### Student Module
 | # | Screen | File |
@@ -192,9 +195,10 @@ firebase deploy --only firestore --project <your-project-id>
 | Package | Version | Purpose |
 |---|---|---|
 | `firebase_core` | ^2.27.0 | Firebase initialization |
-| `firebase_auth` | ^4.20.0 | Authentication |
+| `firebase_auth` | ^4.20.0 | Email/Password + Google authentication |
 | `cloud_firestore` | ^4.17.0 | Real-time database |
 | `firebase_storage` | ^11.7.0 | File uploads |
+| `google_sign_in` | ^6.2.1 | Google OAuth sign-in |
 | `provider` | ^6.1.2 | State management |
 | `google_fonts` | ^6.2.1 | Poppins / Inter fonts |
 | `flutter_animate` | ^4.5.0 | Animations |
@@ -208,11 +212,25 @@ firebase deploy --only firestore --project <your-project-id>
 
 ## Key Flows
 
-### Sign Up
-`SignupScreen` → `AppState.signUp()` → Firebase Auth creates user → Firestore `users/{uid}` document written → `_initStreams()` starts → navigate to shell
+### Sign Up (Email/Password)
+`SignupScreen` → `AppState.signUp()` → Firebase Auth creates user → Firestore `users/{uid}` written → `_initStreams()` starts → navigate to shell
 
-### Login
+### Login (Email/Password)
 `LoginScreen` → `AppState.login()` → Firebase Auth → Firestore `users/{uid}` fetched → role validated → navigate to `TeacherShell` or `StudentShell`
+
+### Sign In with Google — New User
+`LoginScreen / SignupScreen` → `AppState.signInWithGoogle()` → Google OAuth → Firebase Auth → no Firestore doc found → `authStatus = needsRolePicker` → `RolePickerScreen` → user picks role → `AppState.saveGoogleUserRole()` → Firestore `users/{uid}` written → navigate to shell
+
+### Sign In with Google — Returning User
+`LoginScreen / SignupScreen` → `AppState.signInWithGoogle()` → Google OAuth → Firebase Auth → Firestore doc found → `authStatus = authenticated` → navigate directly to shell
+
+### Splash Navigation
+```
+Splash (awaits AppState.initialized)
+  ├── authenticated        → TeacherShell / StudentShell
+  ├── needsRolePicker      → RolePickerScreen
+  └── unauthenticated      → LoginScreen
+```
 
 ### Create Class (Teacher)
 `CreateClassScreen` → `AppState.createClass()` → Firestore `classes/{id}` written → real-time stream updates UI
