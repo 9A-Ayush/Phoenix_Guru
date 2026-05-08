@@ -3,19 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models.dart';
 
 /// Tracks where we are in the auth lifecycle.
-/// [unknown] → app just started, haven't checked yet
-/// [checking] → actively fetching auth state + user profile
-/// [authenticated] → user is logged in and profile is loaded
+/// [unknown]         → app just started, haven't checked yet
+/// [checking]        → actively fetching auth state + user profile
+/// [authenticated]   → user is logged in and profile is loaded
+/// [needsRolePicker] → Google sign-in succeeded but no Firestore profile yet
 /// [unauthenticated] → no user session
-enum AuthStatus { unknown, checking, authenticated, unauthenticated }
+enum AuthStatus { unknown, checking, authenticated, needsRolePicker, unauthenticated }
 
 class AppState extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ── Auth state ────────────────────────────────────────────────────────────
   AuthStatus _authStatus = AuthStatus.unknown;
@@ -236,6 +239,83 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Signs in with Google.
+  /// - If the user already has a Firestore profile → authenticates normally.
+  /// - If new user → sets status to [needsRolePicker] so the UI shows the role picker.
+  /// Returns an error string on failure, null on success.
+  Future<String?> signInWithGoogle() async {
+    _isLoading = true; notifyListeners();
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User cancelled the picker.
+        _isLoading = false; notifyListeners();
+        return null;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final firebaseUser = userCredential.user!;
+
+      // Check if a Firestore profile already exists.
+      final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+
+      if (doc.exists && doc.data() != null) {
+        // Returning user — load profile and go straight to dashboard.
+        _currentUser = UserModel.fromMap(doc.data()!);
+        _authStatus = AuthStatus.authenticated;
+        _initStreams();
+      } else {
+        // New Google user — create a partial profile (no role yet).
+        // Role will be saved by saveGoogleUserRole() after role picker.
+        _currentUser = UserModel(
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName ?? googleUser.displayName ?? 'User',
+          email: firebaseUser.email ?? googleUser.email,
+          role: UserRole.student, // placeholder, overwritten by saveGoogleUserRole
+        );
+        _authStatus = AuthStatus.needsRolePicker;
+      }
+
+      _isLoading = false; notifyListeners();
+      return null;
+    } catch (e) {
+      _isLoading = false; notifyListeners();
+      return _friendlyAuthError(e);
+    }
+  }
+
+  /// Called from RolePickerScreen after the user picks a role.
+  /// Writes the full user document to Firestore and transitions to authenticated.
+  Future<String?> saveGoogleUserRole(UserRole role) async {
+    if (_currentUser == null || _auth.currentUser == null) {
+      return 'Session expired. Please sign in again.';
+    }
+    try {
+      _currentUser = UserModel(
+        id: _auth.currentUser!.uid,
+        name: _currentUser!.name,
+        email: _currentUser!.email,
+        role: role,
+      );
+      await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .set(_currentUser!.toMap());
+      _authStatus = AuthStatus.authenticated;
+      _initStreams();
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   Future<void> logout() async {
     _cancelStreams();
     _currentUser = null;
@@ -244,6 +324,7 @@ class AppState extends ChangeNotifier {
     _tests.clear();
     _attempts.clear();
     notifyListeners();
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 

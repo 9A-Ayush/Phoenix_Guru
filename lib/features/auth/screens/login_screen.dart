@@ -9,9 +9,9 @@ import '../../../core/models.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import 'role_picker_screen.dart';
 import '../../student/screens/student_shell.dart';
 import '../../teacher/screens/teacher_shell.dart';
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -47,6 +47,25 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(builder: (_) => isTeacher ? const TeacherShell() : const StudentShell()),
       (_) => false,
     );
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() => _error = null);
+    final state = context.read<AppState>();
+    final err = await state.signInWithGoogle();
+    if (!mounted) return;
+    if (err != null) { setState(() => _error = err); return; }
+    if (state.authStatus == AuthStatus.needsRolePicker) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RolePickerScreen()),
+        (_) => false,
+      );
+    } else if (state.authStatus == AuthStatus.authenticated) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => state.isTeacher ? const TeacherShell() : const StudentShell()),
+        (_) => false,
+      );
+    }
   }
 
   @override
@@ -116,13 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 AppButton(label: 'Login', onTap: _login, loading: loading)
                     .animate().fadeIn(delay: 400.ms, duration: 400.ms).scale(begin: const Offset(0.95, 0.95)),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Row(children: const [
                   Expanded(child: Divider(color: AppColors.border)),
                   Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('or', style: TextStyle(color: AppColors.textMuted))),
                   Expanded(child: Divider(color: AppColors.border)),
                 ]),
                 const SizedBox(height: 16),
+
+                // Google Sign-In button
+                GoogleSignInButton(onTap: _googleSignIn, loading: loading)
+                    .animate().fadeIn(delay: 480.ms, duration: 400.ms),
+
+                const SizedBox(height: 20),
 
                 // Role selector
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [

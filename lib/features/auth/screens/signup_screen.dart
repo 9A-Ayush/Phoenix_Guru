@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/models.dart';
 import '../../../shared/widgets/widgets.dart';
+import 'role_picker_screen.dart';
 import '../../student/screens/student_shell.dart';
 import '../../teacher/screens/teacher_shell.dart';
 
@@ -42,6 +43,25 @@ class _SignupScreenState extends State<SignupScreen> {
       MaterialPageRoute(builder: (_) => isTeacher ? const TeacherShell() : const StudentShell()),
       (_) => false,
     );
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() => _error = null);
+    final state = context.read<AppState>();
+    final err = await state.signInWithGoogle();
+    if (!mounted) return;
+    if (err != null) { setState(() => _error = err); return; }
+    if (state.authStatus == AuthStatus.needsRolePicker) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RolePickerScreen()),
+        (_) => false,
+      );
+    } else if (state.authStatus == AuthStatus.authenticated) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => state.isTeacher ? const TeacherShell() : const StudentShell()),
+        (_) => false,
+      );
+    }
   }
 
   @override
@@ -111,6 +131,17 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 24),
                 AppButton(label: 'Create Account', onTap: _signUp, loading: loading)
                     .animate().fadeIn(delay: 350.ms),
+
+                const SizedBox(height: 16),
+                Row(children: const [
+                  Expanded(child: Divider(color: AppColors.border)),
+                  Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('or', style: TextStyle(color: AppColors.textMuted))),
+                  Expanded(child: Divider(color: AppColors.border)),
+                ]),
+                const SizedBox(height: 16),
+
+                GoogleSignInButton(onTap: _googleSignIn, loading: loading)
+                    .animate().fadeIn(delay: 420.ms),
 
                 const SizedBox(height: 20),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [

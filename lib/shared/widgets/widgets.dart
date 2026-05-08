@@ -440,3 +440,81 @@ class SectionHeader extends StatelessWidget {
     );
   }
 }
+
+
+// ── Google Sign-In Button ─────────────────────────────────────────────────────
+
+class GoogleSignInButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final bool loading;
+
+  const GoogleSignInButton({super.key, required this.onTap, required this.loading});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: GestureDetector(
+        onTap: loading ? null : onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            SizedBox(
+              width: 20, height: 20,
+              child: CustomPaint(painter: _GoogleLogoPainter()),
+            ),
+            const SizedBox(width: 12),
+            Text('Continue with Google',
+                style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final paint = Paint()..style = PaintingStyle.fill;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    const strokeW = 0.22;
+
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(rect, -1.57, 1.57, true, paint);
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(rect, -3.14, -1.57, true, paint);
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(rect, 3.14, 1.57, true, paint);
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(rect, 0, 1.57, true, paint);
+
+    // Inner white circle
+    paint.color = AppColors.surface;
+    canvas.drawCircle(center, radius * (1 - strokeW * 2), paint);
+
+    // Blue horizontal bar (the G crossbar)
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(center.dx, center.dy - radius * strokeW, radius, radius * strokeW * 2),
+      paint,
+    );
+
+    // Re-clip inner circle
+    paint.color = AppColors.surface;
+    canvas.drawCircle(center, radius * (1 - strokeW * 2), paint);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}

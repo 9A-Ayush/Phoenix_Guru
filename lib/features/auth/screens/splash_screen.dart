@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
 import 'login_screen.dart';
+import 'role_picker_screen.dart';
 import '../../student/screens/student_shell.dart';
 import '../../teacher/screens/teacher_shell.dart';
 
@@ -54,6 +55,8 @@ class _SplashScreenState extends State<SplashScreen> {
     Widget next;
     if (state.authStatus == AuthStatus.authenticated && state.currentUser != null) {
       next = state.isTeacher ? const TeacherShell() : const StudentShell();
+    } else if (state.authStatus == AuthStatus.needsRolePicker) {
+      next = const RolePickerScreen();
     } else {
       next = const LoginScreen();
     }
