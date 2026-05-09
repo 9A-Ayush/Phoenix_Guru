@@ -44,44 +44,70 @@ class _EditTestScreenState extends State<EditTestScreen> {
     super.dispose();
   }
 
-  String _formatDate(DateTime d) {
-    const m = ['Jan','Feb','Mar','Apr','May','Jun',
-                'Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${d.day} ${m[d.month - 1]} ${d.year}';
+  String _formatDateTime(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final hour = d.hour == 0 ? 12 : (d.hour > 12 ? d.hour - 12 : d.hour);
+    final amPm = d.hour >= 12 ? 'PM' : 'AM';
+    final minute = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year}, $hour:$minute $amPm';
   }
 
-  Future<void> _pickDate() async {
+  Future<void> _pickDateTime() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final picked = await showDatePicker(
+    
+    final themeBuilder = (BuildContext context, Widget? child) => Theme(
+      data: ThemeData.dark().copyWith(
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF5B2FD4),
+          onPrimary: Colors.white,
+          surface: Color(0xFF0A0A0A),
+          onSurface: Colors.white,
+        ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Color(0xFF0A0A0A),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFF5B2FD4),
+            textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+      child: child!,
+    );
+
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: _expiresAt != null && _expiresAt!.isAfter(today)
           ? _expiresAt!
           : today.add(const Duration(days: 1)),
       firstDate: today.add(const Duration(days: 1)),
       lastDate: DateTime(now.year + 2),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF5B2FD4),
-            onPrimary: Colors.white,
-            surface: Color(0xFF0A0A0A),
-            onSurface: Colors.white,
-          ),
-          dialogTheme: const DialogThemeData(
-            backgroundColor: Color(0xFF0A0A0A),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF5B2FD4),
-              textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-        child: child!,
-      ),
+      builder: themeBuilder,
     );
-    if (picked != null) setState(() => _expiresAt = picked);
+    if (pickedDate == null || !mounted) return;
+
+    final initialTime = _expiresAt != null
+        ? TimeOfDay(hour: _expiresAt!.hour, minute: _expiresAt!.minute)
+        : const TimeOfDay(hour: 23, minute: 59);
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: themeBuilder,
+    );
+    if (pickedTime == null) return;
+
+    setState(() {
+      _expiresAt = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
   }
 
   Future<void> _save() async {
@@ -232,10 +258,10 @@ class _EditTestScreenState extends State<EditTestScreen> {
                   const SizedBox(height: 16),
 
                   // Expiry date
-                  _Label('Expiration Date'),
+                  _Label('Expiration Date & Time'),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: _pickDate,
+                    onTap: _pickDateTime,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       height: 50,
@@ -260,7 +286,7 @@ class _EditTestScreenState extends State<EditTestScreen> {
                         Expanded(
                           child: Text(
                             _expiresAt != null
-                                ? _formatDate(_expiresAt!)
+                                ? _formatDateTime(_expiresAt!)
                                 : 'No expiry set',
                             style: GoogleFonts.poppins(
                               color: _expiresAt != null

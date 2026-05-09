@@ -294,10 +294,12 @@ class TeacherClassesPage extends StatelessWidget {
 class TeacherTestsPage extends StatelessWidget {
   const TeacherTestsPage({super.key});
 
-  String _formatDate(DateTime d) {
-    const m = ['Jan','Feb','Mar','Apr','May','Jun',
-                'Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${d.day} ${m[d.month - 1]} ${d.year}';
+  String _formatDateTime(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final hour = d.hour == 0 ? 12 : (d.hour > 12 ? d.hour - 12 : d.hour);
+    final amPm = d.hour >= 12 ? 'PM' : 'AM';
+    final minute = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year}, $hour:$minute $amPm';
   }
 
   @override
@@ -364,7 +366,7 @@ class TeacherTestsPage extends StatelessWidget {
                     final t = tests[i];
                     return _TestCard(
                       test: t,
-                      formatDate: _formatDate,
+                      formatDateTime: _formatDateTime,
                     ).animate().fadeIn(delay: (i * 60).ms);
                   },
                 ),
@@ -378,9 +380,9 @@ class TeacherTestsPage extends StatelessWidget {
 
 class _TestCard extends StatelessWidget {
   final TestModel test;
-  final String Function(DateTime) formatDate;
+  final String Function(DateTime) formatDateTime;
 
-  const _TestCard({required this.test, required this.formatDate});
+  const _TestCard({required this.test, required this.formatDateTime});
 
   Color get _statusColor {
     if (test.isLive) return AppColors.success;
@@ -411,7 +413,7 @@ class _TestCard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) => _TestMenuSheet(
         test: test,
-        formatDate: formatDate,
+        formatDateTime: formatDateTime,
         appState: appState,
         navigator: navigator,
         messenger: messenger,
@@ -521,7 +523,7 @@ class _TestCard extends StatelessWidget {
                 const Icon(Symbols.calendar_month,
                     color: AppColors.textMuted, size: 13),
                 const SizedBox(width: 4),
-                Text(formatDate(test.expiresAt!),
+                Text(formatDateTime(test.expiresAt!),
                     style: GoogleFonts.poppins(
                         color: test.isExpired
                             ? AppColors.error
@@ -557,14 +559,14 @@ class _Stat extends StatelessWidget {
 
 class _TestMenuSheet extends StatelessWidget {
   final TestModel test;
-  final String Function(DateTime) formatDate;
+  final String Function(DateTime) formatDateTime;
   final AppState appState;
   final NavigatorState navigator;
   final ScaffoldMessengerState messenger;
 
   const _TestMenuSheet({
     required this.test,
-    required this.formatDate,
+    required this.formatDateTime,
     required this.appState,
     required this.navigator,
     required this.messenger,
@@ -686,7 +688,7 @@ class _TestMenuSheet extends StatelessWidget {
           iconColor: const Color(0xFF5B2FD4),
           label: 'Extend Expiry',
           subtitle: test.expiresAt != null
-              ? 'Current: ${formatDate(test.expiresAt!)}'
+              ? 'Current: ${formatDateTime(test.expiresAt!)}'
               : 'Set a new expiration date',
           onTap: () async {
             Navigator.pop(context); // close the sheet first
@@ -696,8 +698,28 @@ class _TestMenuSheet extends StatelessWidget {
             final navContext = navigator.context;
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
+            
+            final themeBuilder = (BuildContext ctx, Widget? child) => Theme(
+              data: ThemeData.dark().copyWith(
+                colorScheme: const ColorScheme.dark(
+                  primary: Color(0xFF5B2FD4),
+                  onPrimary: Colors.white,
+                  surface: Color(0xFF0A0A0A),
+                  onSurface: Colors.white,
+                ),
+                dialogTheme: const DialogThemeData(
+                  backgroundColor: Color(0xFF0A0A0A),
+                ),
+                textButtonTheme: TextButtonThemeData(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF5B2FD4),
+                  ),
+                ),
+              ),
+              child: child!,
+            );
 
-            final picked = await showDatePicker(
+            final pickedDate = await showDatePicker(
               context: navContext,
               initialDate: test.expiresAt != null &&
                       test.expiresAt!.isAfter(today)
@@ -705,34 +727,35 @@ class _TestMenuSheet extends StatelessWidget {
                   : today.add(const Duration(days: 1)),
               firstDate: today.add(const Duration(days: 1)),
               lastDate: DateTime(now.year + 2),
-              builder: (ctx, child) => Theme(
-                data: ThemeData.dark().copyWith(
-                  colorScheme: const ColorScheme.dark(
-                    primary: Color(0xFF5B2FD4),
-                    onPrimary: Colors.white,
-                    surface: Color(0xFF0A0A0A),
-                    onSurface: Colors.white,
-                  ),
-                  dialogTheme: const DialogThemeData(
-                    backgroundColor: Color(0xFF0A0A0A),
-                  ),
-                  textButtonTheme: TextButtonThemeData(
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF5B2FD4),
-                    ),
-                  ),
-                ),
-                child: child!,
-              ),
+              builder: themeBuilder,
             );
-            if (picked != null) {
-              final err = await appState
-                  .extendTestExpiry(testId: test.id, newExpiry: picked);
-              if (err != null) {
-                _showError(err);
-              } else {
-                _showSuccess('Expiry extended to ${formatDate(picked)}');
-              }
+            if (pickedDate == null) return;
+            
+            final initialTime = test.expiresAt != null
+                ? TimeOfDay(hour: test.expiresAt!.hour, minute: test.expiresAt!.minute)
+                : const TimeOfDay(hour: 23, minute: 59);
+
+            final pickedTime = await showTimePicker(
+              context: navContext,
+              initialTime: initialTime,
+              builder: themeBuilder,
+            );
+            if (pickedTime == null) return;
+            
+            final picked = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              pickedTime.hour,
+              pickedTime.minute,
+            );
+
+            final err = await appState
+                .extendTestExpiry(testId: test.id, newExpiry: picked);
+            if (err != null) {
+              _showError(err);
+            } else {
+              _showSuccess('Expiry extended to ${formatDateTime(picked)}');
             }
           },
         ),
