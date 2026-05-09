@@ -433,6 +433,45 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Updates class name, subject and description in Firestore.
+  Future<String?> updateClass({
+    required String classId,
+    required String name,
+    required String subject,
+    required String description,
+  }) async {
+    try {
+      await _firestore.collection('classes').doc(classId).update({
+        'name': name,
+        'subject': subject,
+        'description': description,
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Deletes a class and all its associated tests from Firestore.
+  Future<String?> deleteClass(String classId) async {
+    try {
+      // Delete all tests belonging to this class
+      final testSnap = await _firestore
+          .collection('tests')
+          .where('classId', isEqualTo: classId)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in testSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_firestore.collection('classes').doc(classId));
+      await batch.commit();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   /// Returns a real-time stream of the class document.
   Stream<ClassModel?> classStream(String classId) {
     return _firestore

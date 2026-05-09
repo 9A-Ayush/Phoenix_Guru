@@ -49,6 +49,94 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     ));
   }
 
+  void _showMenu(BuildContext context, ClassModel cls) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ClassMenuSheet(
+        cls: cls,
+        onEdit: () {
+          Navigator.pop(context);
+          _showEditSheet(context, cls);
+        },
+        onDelete: () {
+          Navigator.pop(context);
+          _confirmDelete(context, cls);
+        },
+      ),
+    );
+  }
+
+  void _showEditSheet(BuildContext context, ClassModel cls) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _EditClassSheet(cls: cls),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, ClassModel cls) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete Class',
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(
+            'Are you sure you want to delete "${cls.name}"?\n\nThis will also delete all tests in this class. This cannot be undone.',
+            style: GoogleFonts.poppins(
+                color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+          ),
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // close dialog
+              final nav = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final err = await context
+                  .read<AppState>()
+                  .deleteClass(cls.id);
+              if (!mounted) return;
+              if (err != null) {
+                messenger.showSnackBar(SnackBar(
+                  content: Text(err,
+                      style: GoogleFonts.poppins(color: Colors.white)),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ));
+              } else {
+                nav.pop(); // pop class detail screen
+                messenger.showSnackBar(SnackBar(
+                  content: Text('Class deleted',
+                      style: GoogleFonts.poppins(color: Colors.white)),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ));
+              }
+            },
+            child: Text('Delete',
+                style: GoogleFonts.poppins(
+                    color: AppColors.error, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Use StreamBuilder so the header updates in real time
@@ -77,7 +165,25 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  const AppBackButton(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const AppBackButton(),
+                      GestureDetector(
+                        onTap: () => _showMenu(context, cls),
+                        child: Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: const Icon(Icons.more_vert_rounded,
+                              color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 20),
 
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -653,6 +759,415 @@ class _ShareCodeCard extends StatelessWidget {
           ),
         ),
       ]),
+    );
+  }
+}
+
+// ── Class menu bottom sheet ───────────────────────────────────────────────────
+
+class _ClassMenuSheet extends StatelessWidget {
+  final ClassModel cls;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _ClassMenuSheet({
+    required this.cls,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        // Handle
+        Container(
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.border,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Class name header
+        Row(children: [
+          Container(
+            width: 42, height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Symbols.school, color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(cls.name,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              Text(cls.subject,
+                  style: GoogleFonts.poppins(
+                      color: AppColors.textSecondary, fontSize: 12)),
+            ]),
+          ),
+        ]),
+
+        const SizedBox(height: 20),
+        const Divider(color: AppColors.border, height: 1),
+        const SizedBox(height: 12),
+
+        // Edit option
+        _MenuOption(
+          icon: Symbols.edit,
+          iconColor: AppColors.primary,
+          label: 'Edit Class',
+          subtitle: 'Change name, subject or description',
+          onTap: onEdit,
+        ),
+
+        const SizedBox(height: 8),
+
+        // Delete option
+        _MenuOption(
+          icon: Symbols.delete,
+          iconColor: AppColors.error,
+          label: 'Delete Class',
+          subtitle: 'Permanently remove this class and its tests',
+          onTap: onDelete,
+          destructive: true,
+        ),
+      ]),
+    );
+  }
+}
+
+class _MenuOption extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  const _MenuOption({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: destructive
+              ? AppColors.errorLight
+              : AppColors.surface2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: destructive
+                ? AppColors.error.withValues(alpha: 0.2)
+                : AppColors.border,
+          ),
+        ),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label,
+                  style: GoogleFonts.poppins(
+                      color: destructive ? AppColors.error : Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600)),
+              Text(subtitle,
+                  style: GoogleFonts.poppins(
+                      color: destructive
+                          ? AppColors.error.withValues(alpha: 0.7)
+                          : AppColors.textSecondary,
+                      fontSize: 12)),
+            ]),
+          ),
+          Icon(Symbols.chevron_right,
+              color: destructive
+                  ? AppColors.error.withValues(alpha: 0.5)
+                  : AppColors.textMuted,
+              size: 18),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Edit class bottom sheet ───────────────────────────────────────────────────
+
+class _EditClassSheet extends StatefulWidget {
+  final ClassModel cls;
+  const _EditClassSheet({required this.cls});
+
+  @override
+  State<_EditClassSheet> createState() => _EditClassSheetState();
+}
+
+class _EditClassSheetState extends State<_EditClassSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descCtrl;
+  late String _subject;
+  bool _saving = false;
+  String? _error;
+
+  static const _subjects = [
+    'Physics', 'Mathematics', 'Chemistry', 'Biology',
+    'History', 'Geography', 'English', 'Computer Science',
+    'Economics', 'Other',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.cls.name);
+    _descCtrl = TextEditingController(text: widget.cls.description);
+    _subject  = widget.cls.subject;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _saving = true; _error = null; });
+    final err = await context.read<AppState>().updateClass(
+      classId:     widget.cls.id,
+      name:        _nameCtrl.text.trim(),
+      subject:     _subject,
+      description: _descCtrl.text.trim(),
+    );
+    if (!mounted) return;
+    if (err != null) {
+      setState(() { _saving = false; _error = err; });
+    } else {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Class updated!',
+            style: GoogleFonts.poppins(color: Colors.white)),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottom),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            // Handle
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Edit Class',
+                    style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700)),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.close_rounded,
+                        color: AppColors.textMuted, size: 18),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Class name
+            _SheetLabel('Class Name'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameCtrl,
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Name required' : null,
+              decoration: InputDecoration(
+                hintText: 'e.g. Physics — Class 12A',
+                prefixIcon: const Icon(Symbols.edit,
+                    color: AppColors.textMuted, size: 18),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Subject dropdown
+            _SheetLabel('Subject'),
+            const SizedBox(height: 8),
+            Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primary),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _subject,
+                  dropdownColor: AppColors.surface2,
+                  icon: const Icon(Symbols.keyboard_arrow_down,
+                      color: AppColors.textMuted, size: 18),
+                  isExpanded: true,
+                  items: _subjects.map((s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s,
+                        style: GoogleFonts.poppins(
+                            color: Colors.white, fontSize: 14)),
+                  )).toList(),
+                  onChanged: (v) =>
+                      setState(() => _subject = v ?? _subject),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Description
+            _SheetLabel('Description'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _descCtrl,
+              maxLines: 3,
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Brief description...',
+                contentPadding: const EdgeInsets.all(14),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 2)),
+                filled: true,
+                fillColor: AppColors.surface2,
+              ),
+            ),
+
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.errorLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(_error!,
+                    style: GoogleFonts.poppins(
+                        color: AppColors.error, fontSize: 13)),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                    : Text('Save Changes',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetLabel extends StatelessWidget {
+  final String text;
+  const _SheetLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(text,
+          style: GoogleFonts.poppins(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500)),
     );
   }
 }
