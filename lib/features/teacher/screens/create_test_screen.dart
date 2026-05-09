@@ -20,13 +20,13 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   final _titleCtrl = TextEditingController();
   int _duration = 60;
   String? _selectedClassId;
+  DateTime? _expiresAt;
   bool _loading = false;
   final List<_QuestionData> _questions = [];
 
   @override
   void initState() {
     super.initState();
-    // Add a sample question
     _questions.add(_QuestionData(
       question: 'Which law states that every action has an equal and opposite reaction?',
       options: ["Newton's First Law", "Newton's Second Law", "Newton's Third Law", "Law of Gravitation"],
@@ -37,46 +37,119 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   @override
   void dispose() { _titleCtrl.dispose(); super.dispose(); }
 
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _expiresAt ?? today.add(const Duration(days: 1)),
+      firstDate: today.add(const Duration(days: 1)), // no past or today
+      lastDate: DateTime(now.year + 2),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF5B2FD4),       // selected day bg
+              onPrimary: Colors.white,           // selected day text
+              surface: Color(0xFF0A0A0A),        // calendar bg
+              onSurface: Colors.white,           // day text
+              secondary: Color(0xFF5B2FD4),
+              onSecondary: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF0A0A0A),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFF0A0A0A),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF5B2FD4),
+                textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+            ),
+            textTheme: GoogleFonts.poppinsTextTheme(
+              ThemeData.dark().textTheme,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() => _expiresAt = picked);
+    }
+  }
+
+  String _formatDate(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
   Future<void> _publish() async {
+    // Validate form fields
     if (!_formKey.currentState!.validate()) return;
+
+    // Class validation
     if (_selectedClassId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Please select a class', style: GoogleFonts.poppins(color: Colors.white)),
-        backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      _showError('Please select a class');
       return;
     }
+
+    // Expiry date validation
+    if (_expiresAt == null) {
+      _showError('Please set an expiration date');
+      return;
+    }
+
+    // Questions validation
     if (_questions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Add at least one question', style: GoogleFonts.poppins(color: Colors.white)),
-        backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      _showError('Add at least one question');
       return;
     }
 
     setState(() => _loading = true);
-    final questions = _questions.map((q) => QuizQuestion(question: q.question, options: q.options, correctIndex: q.correctIndex)).toList();
+    final questions = _questions.map((q) => QuizQuestion(
+      question: q.question,
+      options: q.options,
+      correctIndex: q.correctIndex,
+    )).toList();
+
     await context.read<AppState>().createTest(
       title: _titleCtrl.text.trim(),
       classId: _selectedClassId!,
       durationMinutes: _duration,
       questions: questions,
+      expiresAt: _expiresAt,
     );
     if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Test published!', style: GoogleFonts.poppins(color: Colors.white)),
-      backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating,
+      content: Text('Test published!',
+          style: GoogleFonts.poppins(color: Colors.white)),
+      backgroundColor: AppColors.success,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.poppins(color: Colors.white)),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
   void _addQuestion() {
-    showDialog(context: context, builder: (_) => _AddQuestionDialog(
-      onSave: (q) => setState(() => _questions.add(q)),
-    ));
+    showDialog(
+      context: context,
+      builder: (_) => _AddQuestionDialog(
+        onSave: (q) => setState(() => _questions.add(q)),
+      ),
+    );
   }
 
   @override
@@ -182,6 +255,76 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                   ),
                 ])),
               ]).animate().fadeIn(delay: 200.ms),
+
+              const SizedBox(height: 16),
+
+              // Expiration date
+              _Lbl('Expiration Date *'),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _pickDate,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _expiresAt != null
+                          ? const Color(0xFF5B2FD4)
+                          : AppColors.border,
+                      width: _expiresAt != null ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(children: [
+                    Icon(
+                      Symbols.calendar_month,
+                      color: _expiresAt != null
+                          ? const Color(0xFF5B2FD4)
+                          : AppColors.textMuted,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _expiresAt != null
+                            ? _formatDate(_expiresAt!)
+                            : 'Select expiration date',
+                        style: GoogleFonts.poppins(
+                          color: _expiresAt != null
+                              ? Colors.white
+                              : AppColors.textMuted,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (_expiresAt != null)
+                      GestureDetector(
+                        onTap: () => setState(() => _expiresAt = null),
+                        child: const Icon(Icons.close_rounded,
+                            color: AppColors.textMuted, size: 18),
+                      )
+                    else
+                      const Icon(Symbols.chevron_right,
+                          color: AppColors.textMuted, size: 18),
+                  ]),
+                ),
+              ).animate().fadeIn(delay: 230.ms).slideY(begin: 0.15, end: 0),
+
+              if (_expiresAt != null) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  const Icon(Symbols.info,
+                      color: AppColors.textMuted, size: 13),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Test expires at midnight on ${_formatDate(_expiresAt!)}',
+                    style: GoogleFonts.poppins(
+                        color: AppColors.textMuted, fontSize: 11),
+                  ),
+                ]),
+              ],
 
               const SizedBox(height: 24),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
