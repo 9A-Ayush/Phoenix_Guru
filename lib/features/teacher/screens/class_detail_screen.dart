@@ -53,6 +53,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      useRootNavigator: false,
       builder: (_) => _ClassMenuSheet(
         cls: cls,
         onEdit: () {
@@ -72,6 +73,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useRootNavigator: false,
       builder: (_) => _EditClassSheet(cls: cls),
     );
   }

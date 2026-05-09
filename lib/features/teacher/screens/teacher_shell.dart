@@ -411,6 +411,7 @@ class _TestCard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      useRootNavigator: false,
       builder: (sheetCtx) => _TestMenuSheet(
         test: test,
         formatDateTime: formatDateTime,
