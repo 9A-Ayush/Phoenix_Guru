@@ -12,9 +12,11 @@ A full-stack Flutter education platform for teachers and students, featuring liv
 lib/
 ├── main.dart                              # App entry, ChangeNotifierProvider setup
 ├── core/
-│   ├── models.dart                        # UserModel, ClassModel, TestModel, QuizQuestion, QuizAttempt
+│   ├── models.dart                        # All data models including LiveSession, LiveParticipant, LiveAnswer
 │   ├── providers/
-│   │   └── app_state.dart                 # Central ChangeNotifier — all auth, data, Firestore ops
+│   │   └── app_state.dart                 # Central ChangeNotifier — auth, data, live session ops
+│   ├── services/
+│   │   └── quiz_service.dart              # Isolated Firestore logic for live quiz sessions
 │   └── theme/
 │       └── app_theme.dart                 # AppColors + AppTheme (dark)
 ├── shared/
@@ -34,21 +36,23 @@ lib/
     │   ├── screens/
     │   │   └── student_shell.dart         # Dashboard · Classes · Material · Quiz · Profile
     │   └── quiz/
-    │       ├── live_quiz_screens.dart     # Join PIN · ABCD answer cards · Leaderboard
+    │       ├── join_live_quiz_screen.dart # PIN entry → real Firestore session lookup
+    │       ├── live_quiz_screens.dart     # ABCD answer cards · Leaderboard (podium)
     │       └── quiz_screens.dart          # TestAttempt · TestResult · QuizResultsList
     └── teacher/
         └── screens/
-            ├── teacher_shell.dart         # Dashboard · Classes · Tests · Quiz · Profile
-            ├── create_class_screen.dart   # Subject dropdown, description, Firestore save
-            ├── create_test_screen.dart    # Question builder dialog, Firestore save
-            ├── class_detail_screen.dart   # Real-time students/tests/material tabs
-            │                             # + three-dot menu (edit/delete class)
-            ├── live_quiz_host_screen.dart # Real-time answer distribution, reveal/next
-            ├── test_results_screen.dart   # Live Firestore scores, grade bars, flagged Qs
-            ├── edit_profile_screen.dart   # Name edit → Firestore update
-            ├── change_password_screen.dart # Re-auth + Firebase Auth password update
-            ├── notifications_screen.dart  # Toggle prefs → Firestore notificationPrefs
-            └── help_support_screen.dart   # FAQ accordion + contact cards
+            ├── teacher_shell.dart             # Dashboard · Classes · Tests · Quiz · Profile
+            ├── create_class_screen.dart       # Subject dropdown, description, Firestore save
+            ├── create_test_screen.dart        # Question builder, date+time picker, allowed attempts
+            ├── edit_test_screen.dart          # Edit name, questions, expiry → Firestore
+            ├── class_detail_screen.dart       # Real-time students/tests tabs, multi-select remove
+            ├── live_session_lobby_screen.dart # PIN display, live participant grid, start button
+            ├── live_quiz_host_screen.dart     # Real-time answer distribution via live_answers stream
+            ├── test_results_screen.dart       # Live Firestore scores, grade bars, flagged Qs
+            ├── edit_profile_screen.dart       # Name edit → Firestore update
+            ├── change_password_screen.dart    # Re-auth + Firebase Auth password update
+            ├── notifications_screen.dart      # Toggle prefs → Firestore notificationPrefs
+            └── help_support_screen.dart       # FAQ accordion + contact cards
 ```
 
 ---
@@ -70,14 +74,23 @@ Firebase Auth (Email/Password + Google Sign-In)
      │     ├── /users/{uid}
      │     ├── /classes/{classId}
      │     ├── /tests/{testId}
-     │     └── /attempts/{attemptId}
+     │     ├── /attempts/{attemptId}
+     │     ├── /live_sessions/{sessionId}
+     │     │     └── /participants/{userId}
+     │     └── /live_answers/{answerId}
+     │
+     ├── QuizService (isolated Firestore service)
+     │     ├── startSession() / endSession() / nextQuestion()
+     │     ├── joinSession() / submitAnswer()
+     │     └── sessionStream() / participantsStream() / answersForQuestion()
      │
      └── Provider.of<AppState> → Screens → Widgets
 ```
 
-- **State Management:** Provider (`ChangeNotifier`)
+- **State Management:** Provider (`ChangeNotifier`) + `ValueNotifier` for selection UI
 - **Navigation:** Flutter Navigator 1.0 (`MaterialPageRoute`)
 - **Backend:** Firebase — Auth, Firestore, Storage
+- **Live Quiz:** Dedicated `live_sessions` + `participants` + `live_answers` collections
 - **Animations:** `flutter_animate` (fade, slide, scale, stagger)
 - **Fonts:** Poppins (primary), Inter (status/labels)
 
@@ -108,7 +121,8 @@ Firebase Auth (Email/Password + Google Sign-In)
 | `updateClass(classId, name, subject, desc)` | Updates class fields in Firestore |
 | `deleteClass(classId)` | Batch-deletes class + all its tests from Firestore |
 | `joinClass(code)` | Student joins via code → `arrayUnion` on `studentIds` |
-| `removeStudent(classId, studentId)` | Teacher removes student → `arrayRemove` |
+| `removeStudent(classId, studentId)` | Removes one student → `arrayRemove` |
+| `removeStudents(classId, studentIds)` | Batch-removes multiple students in one write |
 | `classStream(classId)` | Real-time stream of a single class document |
 | `fetchUser(uid)` | One-time fetch of a user profile by UID |
 
@@ -124,6 +138,30 @@ Firebase Auth (Email/Password + Google Sign-In)
 | `testsForClass(classId)` | Filtered getter from streamed tests |
 | `attemptsForTest(testId)` | Filtered getter from streamed attempts |
 
+### Live Sessions
+| Method | Description |
+|---|---|
+| `startLiveSession(test)` | Creates `live_sessions/{id}` doc with auto-generated PIN |
+| `updateLiveSession(sessionId, currentQuestion, status)` | Advances question or changes status |
+| `liveSessionStream(sessionId)` | Real-time stream of session document |
+| `findSessionByPin(pin)` | Finds active session by 6-digit PIN |
+| `liveAttemptsStream(testId)` | Real-time stream of all attempts for a test |
+
+### QuizService (lib/core/services/quiz_service.dart)
+| Method | Description |
+|---|---|
+| `startSession(test, hostId, hostName)` | Creates session in `live_sessions` |
+| `nextQuestion(sessionId, index)` | Advances to next question, sets status=active |
+| `showResult(sessionId)` | Sets status=showingResult |
+| `endSession(sessionId)` | Sets status=ended |
+| `toggleLock(sessionId, locked)` | Locks/unlocks room for new joins |
+| `kickParticipant(sessionId, userId)` | Removes participant from subcollection |
+| `joinSession(sessionId, userId, name, initials)` | Adds participant doc, increments count |
+| `submitAnswer(...)` | Saves answer, updates participant score in batch |
+| `sessionStream(sessionId)` | Real-time session doc stream |
+| `participantsStream(sessionId)` | Real-time participants ordered by score |
+| `answersForQuestion(sessionId, questionIndex)` | Real-time answers for current question |
+
 ---
 
 ## Firestore Collections
@@ -132,17 +170,18 @@ Firebase Auth (Email/Password + Google Sign-In)
 |---|---|---|
 | `users` | `{uid}` | User profile — name, email, role, createdAt, notificationPrefs |
 | `classes` | `{classId}` | Class — teacherId, classCode, studentIds, subject, description |
-| `tests` | `{testId}` | Test — questions, duration, classId, isLive |
+| `tests` | `{testId}` | Test — questions, duration, classId, isLive, expiresAt, maxAttempts |
 | `attempts` | `{attemptId}` | Quiz attempt — userId, answers map, completedAt |
+| `live_sessions` | `{sessionId}` | Live session — hostId, pin, currentQuestion, status, participantCount |
+| `live_sessions/{id}/participants` | `{userId}` | Participant — score, rank, answeredCount, correctCount |
+| `live_answers` | `{answerId}` | Answer — sessionId, participantId, questionIndex, isCorrect, pointsEarned, responseMs |
 
-### UserModel fields
+### Scoring Formula
 ```
-id                  String   Firebase Auth UID
-name                String   Full name
-email               String   Email address
-role                String   "student" | "teacher"
-createdAt           String   ISO-8601 timestamp
-notificationPrefs   Map      classActivity, testReminders, studentJoins, quizResults, appUpdates
+isCorrect = selectedIndex == correctIndex
+speedFactor = 1 - (responseMs / (timerSeconds * 1000))
+points = isCorrect ? (500 + 500 * speedFactor).round() : 0
+// Range: 500–1000 pts for correct, 0 for wrong
 ```
 
 ---
@@ -153,9 +192,12 @@ notificationPrefs   Map      classActivity, testReminders, studentJoins, quizRes
 |---|---|
 | `UserModel` | id, name, email, role, createdAt, avatarInitials |
 | `ClassModel` | id, name, subject, description, teacherId, classCode, studentIds, createdAt |
-| `TestModel` | id, title, classId, questions, durationMinutes, isLive, scheduledAt, expiresAt, maxAttempts |
+| `TestModel` | id, title, classId, questions, durationMinutes, isLive, expiresAt, maxAttempts, pin |
 | `QuizQuestion` | id, question, options[4], correctIndex |
 | `QuizAttempt` | id, testId, userId, userName, answers (Map), completedAt |
+| `LiveSession` | id, testId, hostId, pin, currentQuestion, status, participantCount, isLocked |
+| `LiveParticipant` | id, sessionId, name, avatarInitials, score, rank, answeredCount, correctCount |
+| `LiveAnswer` | id, sessionId, participantId, questionId, questionIndex, selectedIndex, isCorrect, pointsEarned, responseMs |
 
 ---
 
@@ -173,6 +215,7 @@ notificationPrefs   Map      classActivity, testReminders, studentJoins, quizRes
 | Error | `#EF4444` |
 | Accent | `#FF6B6B` |
 | Avatar gradient | `#9B7BFF → #5B2FD4` |
+| Calendar selection | `#5B2FD4` |
 | Font | Poppins (main) · Inter (labels) |
 
 ---
@@ -195,31 +238,32 @@ notificationPrefs   Map      classActivity, testReminders, studentJoins, quizRes
 | 07 | My Classes | List + join class bottom sheet (6-digit OTP input) |
 | 08 | Study Material | Filter tabs, downloadable files |
 | 09 | Tests | Upcoming/done tabs |
-| 10 | Join Live Quiz | PIN entry |
-| 11 | Live Quiz ABCD | Colorful answer cards |
-| 12 | Test Taking | Progress bar, MCQ |
+| 10 | Join Live Quiz | Real PIN lookup → Firestore session validation |
+| 11 | Live Quiz ABCD | Colorful answer cards, countdown timer |
+| 12 | Test Taking | Progress bar, MCQ, anti-cheat banner |
 | 13 | Profile | Stats, menu rows, quiz history |
-| 14 | Quiz Leaderboard | Podium UI |
-| 15 | Quiz Results List | Grade badges, progress bars |
+| 14 | Quiz Leaderboard | Podium UI (1st/2nd/3rd) |
+| 15 | Quiz Results List | Grade badges, progress bars, real Firestore data |
 
 ### Teacher Module
 | # | Screen | Notes |
 |---|---|---|
 | T01 | Dashboard | Quick actions, stats, class list |
 | T02 | Classes | List with subject icons, tap → detail |
-| T03 | Tests | All tests with status badges |
-| T04 | Live Quiz | Start quiz, view results card |
+| T03 | Tests | Cards with status badges, three-dot menu |
+| T04 | Live Quiz | Test picker → creates session → lobby |
 | T05 | Profile | Stats, gradient avatar + Teacher badge |
-| T06 | Class Detail | Real-time students/tests/material tabs, three-dot menu |
+| T06 | Class Detail | Real-time students/tests tabs, multi-select remove students |
 | T07 | Create Class | Subject dropdown, description, auto class code |
 | T08 | Create Test | Question builder, date+time picker, allowed attempts (1/2) |
-| T09 | Edit Test | Edit name, add/remove questions, extend expiry |
-| T10 | Live Quiz Host | Real-time answer distribution, reveal/next controls |
-| T11 | Test Results | Live Firestore scores, grade bars, flagged questions |
-| T12 | Edit Profile | Name edit → Firestore save |
-| T13 | Change Password | Re-auth + Firebase Auth update |
-| T14 | Notifications | 5 toggles → Firestore `notificationPrefs` |
-| T15 | Help & Support | FAQ accordion (7 items) + contact cards |
+| T09 | Edit Test | Edit name, add/remove/edit questions, extend expiry |
+| T10 | Live Session Lobby | PIN display, live participant grid, lock room, start button |
+| T11 | Live Quiz Host | Real-time answer distribution from `live_answers` stream |
+| T12 | Test Results | Live Firestore scores, grade bars, flagged questions |
+| T13 | Edit Profile | Name edit → Firestore save |
+| T14 | Change Password | Re-auth + Firebase Auth update |
+| T15 | Notifications | 5 toggles → Firestore `notificationPrefs` |
+| T16 | Help & Support | FAQ accordion (7 items) + contact cards |
 
 ---
 
@@ -260,6 +304,7 @@ firebase deploy --only firestore --project <your-project-id>
 | `cloud_firestore` | ^4.17.0 | Real-time database |
 | `firebase_storage` | ^11.7.0 | File uploads |
 | `google_sign_in` | ^6.2.1 | Google OAuth |
+| `qr_flutter` | ^4.1.0 | QR code generation |
 | `provider` | ^6.1.2 | State management |
 | `google_fonts` | ^6.2.1 | Poppins / Inter fonts |
 | `flutter_animate` | ^4.5.0 | Animations |
@@ -293,21 +338,44 @@ Splash (awaits AppState.initialized)
   └── unauthenticated      → LoginScreen
 ```
 
-### Create Class
-`CreateClassScreen` → `AppState.createClass()` → Firestore `classes/{id}` → real-time stream updates UI
+### Create / Edit / Delete Class
+- Create: `CreateClassScreen` → `AppState.createClass()` → Firestore `classes/{id}`
+- Edit: `ClassDetailScreen` three-dot → `updateClass()` → Firestore
+- Delete: three-dot → `deleteClass()` (batch: class + all tests) → Firestore
 
-### Edit / Delete Class
-`ClassDetailScreen` three-dot menu → `updateClass()` or `deleteClass()` (batch: class + tests) → Firestore
+### Remove Students (Multi-select)
+`ClassDetailScreen` three-dot → "Remove Students" → selection mode → `removeStudents(classId, ids)` → `arrayRemove` batch → Firestore
 
-### Edit / Delete Test
-`TeacherTestsPage` three-dot menu → `EditTestScreen` (name/questions/expiry) or `deleteTest()` (batch: test + attempts) or `toggleTestPublish()` or `extendTestExpiry()`
+### Create / Edit / Delete Test
+- Create: `CreateTestScreen` → `AppState.createTest()` → Firestore `tests/{id}`
+- Edit: `EditTestScreen` → `updateTest()` + `extendTestExpiry()` → Firestore
+- Delete: three-dot → `deleteTest()` (batch: test + all attempts) → Firestore
 
 ### Join Class (Student)
 `_JoinClassSheet` → `AppState.joinClass(code)` → Firestore query by `classCode` → `arrayUnion` on `studentIds`
 
-### Live Quiz
-Teacher → `TeacherLiveQuizScreen` → real-time `attempts` stream → answer distribution → reveal/next
-Student → `JoinLiveQuizScreen` → PIN → `LiveQuizAbcdScreen` → `submitAttempt()` → Firestore
+### Live Quiz — Teacher Flow
+```
+TeacherQuizPage → _pickTest() → AppState.startLiveSession(test)
+  → creates live_sessions/{id} with 6-digit PIN
+  → LiveSessionLobbyScreen (shows PIN, participant grid)
+  → teacher taps Start → QuizService.nextQuestion(sessionId, 0)
+  → TeacherLiveQuizScreen (streams live_answers per question)
+  → Reveal Answer → QuizService.showResult()
+  → Next → QuizService.nextQuestion() ... repeat
+  → Finish → QuizService.endSession()
+```
+
+### Live Quiz — Student Flow
+```
+JoinLiveQuizScreen → enter 6-digit PIN
+  → QuizService.findSessionByPin(pin) → validates session
+  → QuizService.joinSession() → creates participants/{userId} doc
+  → LiveQuizAbcdScreen (streams session for question sync)
+  → tap answer → QuizService.submitAnswer() → live_answers/{id}
+  → score computed: 500–1000 pts based on speed
+  → QuizLeaderboardScreen (streams participants ordered by score)
+```
 
 ### Test Results
-`TeacherTestResultsScreen` → `attemptsForTest()` → scores computed from `QuizAttempt.score()` → flagged questions auto-detected (>50% wrong)
+`TeacherTestResultsScreen` → `attemptsForTest()` → scores from `QuizAttempt.score()` → flagged questions auto-detected (>50% wrong)
