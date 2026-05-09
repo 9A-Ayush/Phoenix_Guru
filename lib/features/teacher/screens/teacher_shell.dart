@@ -401,10 +401,21 @@ class _TestCard extends StatelessWidget {
   }
 
   void _showMenu(BuildContext context) {
+    final appState = context.read<AppState>();
+    // Capture navigator & messenger BEFORE showing the sheet,
+    // so they survive widget tree rebuilds triggered by Firestore streams.
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => _TestMenuSheet(test: test, formatDate: formatDate),
+      builder: (sheetCtx) => _TestMenuSheet(
+        test: test,
+        formatDate: formatDate,
+        appState: appState,
+        navigator: navigator,
+        messenger: messenger,
+      ),
     );
   }
 
@@ -547,8 +558,35 @@ class _Stat extends StatelessWidget {
 class _TestMenuSheet extends StatelessWidget {
   final TestModel test;
   final String Function(DateTime) formatDate;
+  final AppState appState;
+  final NavigatorState navigator;
+  final ScaffoldMessengerState messenger;
 
-  const _TestMenuSheet({required this.test, required this.formatDate});
+  const _TestMenuSheet({
+    required this.test,
+    required this.formatDate,
+    required this.appState,
+    required this.navigator,
+    required this.messenger,
+  });
+
+  void _showError(String msg) {
+    messenger.showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.poppins(color: Colors.white)),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
+
+  void _showSuccess(String msg) {
+    messenger.showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.poppins(color: Colors.white)),
+      backgroundColor: AppColors.success,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -602,24 +640,25 @@ class _TestMenuSheet extends StatelessWidget {
         const Divider(color: AppColors.border, height: 1),
         const SizedBox(height: 12),
 
-        // Edit (name + questions + expiry)
+        // ── Edit Test ─────────────────────────────────────────────────────
         _MenuItem(
           icon: Symbols.edit,
           iconColor: AppColors.primary,
           label: 'Edit Test',
           subtitle: 'Change name, questions or expiry date',
           onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => EditTestScreen(test: test)),
-            );
+            Navigator.pop(context); // close the sheet
+            // Small delay to let the sheet fully dismiss
+            Future.delayed(const Duration(milliseconds: 150), () {
+              navigator.push(
+                MaterialPageRoute(builder: (_) => EditTestScreen(test: test)),
+              );
+            });
           },
         ),
         const SizedBox(height: 8),
 
-        // Publish / Unpublish
+        // ── Publish / Unpublish ───────────────────────────────────────────
         _MenuItem(
           icon: test.isLive ? Symbols.pause : Symbols.publish,
           iconColor: test.isLive ? AppColors.warning : AppColors.success,
@@ -628,25 +667,20 @@ class _TestMenuSheet extends StatelessWidget {
               ? 'Stop students from taking this test'
               : 'Make this test available to students',
           onTap: () async {
-            Navigator.pop(context);
-            final err = await context
-                .read<AppState>()
+            Navigator.pop(context); // close the sheet
+            await Future.delayed(const Duration(milliseconds: 150));
+            final err = await appState
                 .toggleTestPublish(test.id, isLive: !test.isLive);
-            if (err != null && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(err,
-                    style: GoogleFonts.poppins(color: Colors.white)),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ));
+            if (err != null) {
+              _showError(err);
+            } else {
+              _showSuccess(test.isLive ? 'Test unpublished' : 'Test published');
             }
           },
         ),
         const SizedBox(height: 8),
 
-        // Extend expiry
+        // ── Extend Expiry ─────────────────────────────────────────────────
         _MenuItem(
           icon: Symbols.calendar_month,
           iconColor: const Color(0xFF5B2FD4),
@@ -655,11 +689,16 @@ class _TestMenuSheet extends StatelessWidget {
               ? 'Current: ${formatDate(test.expiresAt!)}'
               : 'Set a new expiration date',
           onTap: () async {
-            Navigator.pop(context);
+            Navigator.pop(context); // close the sheet first
+            await Future.delayed(const Duration(milliseconds: 150));
+
+            // Use the stable navigator context for the date picker
+            final navContext = navigator.context;
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
+
             final picked = await showDatePicker(
-              context: context,
+              context: navContext,
               initialDate: test.expiresAt != null &&
                       test.expiresAt!.isAfter(today)
                   ? test.expiresAt!
@@ -686,26 +725,20 @@ class _TestMenuSheet extends StatelessWidget {
                 child: child!,
               ),
             );
-            if (picked != null && context.mounted) {
-              final err = await context
-                  .read<AppState>()
+            if (picked != null) {
+              final err = await appState
                   .extendTestExpiry(testId: test.id, newExpiry: picked);
-              if (err != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(err,
-                      style: GoogleFonts.poppins(color: Colors.white)),
-                  backgroundColor: AppColors.error,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ));
+              if (err != null) {
+                _showError(err);
+              } else {
+                _showSuccess('Expiry extended to ${formatDate(picked)}');
               }
             }
           },
         ),
         const SizedBox(height: 8),
 
-        // Delete
+        // ── Delete ────────────────────────────────────────────────────────
         _MenuItem(
           icon: Symbols.delete,
           iconColor: AppColors.error,
@@ -713,10 +746,11 @@ class _TestMenuSheet extends StatelessWidget {
           subtitle: 'Permanently remove this test and all attempts',
           destructive: true,
           onTap: () {
-            Navigator.pop(context);
-            showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
+            Navigator.pop(context); // close the sheet
+            Future.delayed(const Duration(milliseconds: 150), () {
+              showDialog(
+                context: navigator.context,
+              builder: (dialogCtx) => AlertDialog(
                 backgroundColor: AppColors.surface2,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
@@ -733,29 +767,19 @@ class _TestMenuSheet extends StatelessWidget {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(dialogCtx),
                     child: Text('Cancel',
                         style: GoogleFonts.poppins(
                             color: AppColors.textSecondary)),
                   ),
                   TextButton(
                     onPressed: () async {
-                      final nav = Navigator.of(context);
-                      final messenger = ScaffoldMessenger.of(context);
-                      nav.pop();
-                      final err = await context
-                          .read<AppState>()
-                          .deleteTest(test.id);
+                      Navigator.pop(dialogCtx); // close the dialog
+                      final err = await appState.deleteTest(test.id);
                       if (err != null) {
-                        messenger.showSnackBar(SnackBar(
-                          content: Text(err,
-                              style: GoogleFonts.poppins(
-                                  color: Colors.white)),
-                          backgroundColor: AppColors.error,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ));
+                        _showError(err);
+                      } else {
+                        _showSuccess('Test deleted');
                       }
                     },
                     child: Text('Delete',
@@ -764,8 +788,9 @@ class _TestMenuSheet extends StatelessWidget {
                             fontWeight: FontWeight.w700)),
                   ),
                 ],
-              ),
-            );
+                ),
+              );
+            });
           },
         ),
       ]),
@@ -793,6 +818,7 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
