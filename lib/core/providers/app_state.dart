@@ -433,6 +433,21 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Removes multiple students from a class in a single Firestore write.
+  Future<String?> removeStudents({
+    required String classId,
+    required List<String> studentIds,
+  }) async {
+    try {
+      await _firestore.collection('classes').doc(classId).update({
+        'studentIds': FieldValue.arrayRemove(studentIds),
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   /// Updates class name, subject and description in Firestore.
   Future<String?> updateClass({
     required String classId,

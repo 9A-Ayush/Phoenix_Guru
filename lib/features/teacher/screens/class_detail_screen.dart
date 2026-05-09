@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +21,17 @@ class ClassDetailScreen extends StatefulWidget {
 
 class _ClassDetailScreenState extends State<ClassDetailScreen> {
   int _tab = 0;
+
+  // Notifiers owned here, passed down to _StudentsTab
+  final ValueNotifier<bool> _selectionMode = ValueNotifier(false);
+  final ValueNotifier<Set<String>> _selectedIds = ValueNotifier({});
+
+  @override
+  void dispose() {
+    _selectionMode.dispose();
+    _selectedIds.dispose();
+    super.dispose();
+  }
 
   // Subject → icon mapping
   IconData _subjectIcon(String s) {
@@ -64,6 +75,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           Navigator.pop(context);
           _confirmDelete(context, cls);
         },
+        onRemoveStudents: cls.studentIds.isNotEmpty
+            ? () {
+                Navigator.pop(context);
+                _selectionMode.value = true;
+                _selectedIds.value = {};
+                setState(() => _tab = 0);
+              }
+            : null,
       ),
     );
   }
@@ -102,7 +121,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // close dialog
+              Navigator.pop(context);
               final nav = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               final err = await context
@@ -119,7 +138,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       borderRadius: BorderRadius.circular(12)),
                 ));
               } else {
-                nav.pop(); // pop class detail screen
+                nav.pop();
                 messenger.showSnackBar(SnackBar(
                   content: Text('Class deleted',
                       style: GoogleFonts.poppins(color: Colors.white)),
@@ -141,8 +160,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use StreamBuilder so the header updates in real time
-    // (student count changes when someone joins/leaves)
     return StreamBuilder<ClassModel?>(
       stream: context.read<AppState>().classStream(widget.cls.id),
       initialData: widget.cls,
@@ -154,137 +171,193 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           body: SafeArea(
             child: Column(children: [
               // ── Header ──────────────────────────────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF1C1240), AppColors.bg],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const AppBackButton(),
-                      GestureDetector(
-                        onTap: () => _showMenu(context, cls),
-                        child: Container(
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: const Icon(Icons.more_vert_rounded,
-                              color: Colors.white, size: 20),
-                        ),
+              ValueListenableBuilder<bool>(
+                valueListenable: _selectionMode,
+                builder: (context, inSelection, _) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF1C1240), AppColors.bg],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(
-                      width: 56, height: 56,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(_subjectIcon(cls.subject),
-                          color: AppColors.primary, size: 28),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(cls.name,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          inSelection
+                              ? GestureDetector(
+                                  onTap: () {
+                                    _selectionMode.value = false;
+                                    _selectedIds.value = {};
+                                  },
+                                  child: Container(
+                                    height: 36, width: 80,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                      const Icon(Icons.close_rounded,
+                                          color: Colors.white, size: 18),
+                                      const SizedBox(width: 6),
+                                      Text('Cancel',
+                                          style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500)),
+                                    ]),
+                                  ),
+                                )
+                              : const AppBackButton(),
+                          if (!inSelection)
+                            GestureDetector(
+                              onTap: () => _showMenu(context, cls),
+                              child: Container(
+                                width: 36, height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: const Icon(Icons.more_vert_rounded,
+                                    color: Colors.white, size: 20),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      if (inSelection) ...[
+                        Text('Select students',
                             style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700)),
                         const SizedBox(height: 2),
-                        Text(
-                          '${cls.studentCount} student${cls.studentCount == 1 ? '' : 's'}  •  ${cls.subject}',
-                          style: GoogleFonts.poppins(
-                              color: AppColors.textSecondary, fontSize: 13),
-                        ),
-                      ]),
-                    ),
-                  ]),
-
-                  const SizedBox(height: 12),
-
-                  // Class code chip
-                  GestureDetector(
-                    onTap: () => _copyCode(cls.classCode),
-                    child: Container(
-                      height: 32,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Symbols.key,
-                            color: AppColors.primary, size: 14),
-                        const SizedBox(width: 8),
-                        Text('Code: ${cls.classCode}',
+                        ValueListenableBuilder<Set<String>>(
+                          valueListenable: _selectedIds,
+                          builder: (_, ids, __) => Text(
+                            ids.isEmpty
+                                ? 'Tap students to select'
+                                : '${ids.length} selected',
                             style: GoogleFonts.poppins(
-                                color: AppColors.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 6),
-                        const Icon(Symbols.content_copy,
-                            color: AppColors.primary, size: 12),
-                      ]),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Tabs
-                  Row(
-                    children: ['Students', 'Tests', 'Material']
-                        .asMap()
-                        .entries
-                        .map((e) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _tab = e.key),
-                                child: AnimatedContainer(
-                                  duration:
-                                      const Duration(milliseconds: 200),
-                                  height: 36,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14),
-                                  decoration: BoxDecoration(
-                                    color: _tab == e.key
-                                        ? AppColors.primary
-                                        : AppColors.surface,
-                                    borderRadius:
-                                        BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(e.value,
-                                      style: GoogleFonts.poppins(
-                                          color: _tab == e.key
-                                              ? Colors.white
-                                              : AppColors.textSecondary,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600)),
-                                ),
+                                color: AppColors.textSecondary, fontSize: 13),
+                          ),
+                        ),
+                      ] else ...[
+                        Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Container(
+                            width: 56, height: 56,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(_subjectIcon(cls.subject),
+                                color: AppColors.primary, size: 28),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(cls.name,
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${cls.studentCount} student${cls.studentCount == 1 ? '' : 's'}  •  ${cls.subject}',
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13),
                               ),
-                            ))
-                        .toList(),
-                  ),
-                ]),
+                            ]),
+                          ),
+                        ]),
+
+                        const SizedBox(height: 12),
+
+                        // Class code chip
+                        GestureDetector(
+                          onTap: () => _copyCode(cls.classCode),
+                          child: Container(
+                            height: 32,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Symbols.key,
+                                  color: AppColors.primary, size: 14),
+                              const SizedBox(width: 8),
+                              Text('Code: ${cls.classCode}',
+                                  style: GoogleFonts.poppins(
+                                      color: AppColors.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(width: 6),
+                              const Icon(Symbols.content_copy,
+                                  color: AppColors.primary, size: 12),
+                            ]),
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 12),
+
+                      // Tabs
+                      Row(
+                        children: ['Students', 'Tests', 'Material']
+                            .asMap()
+                            .entries
+                            .map((e) => Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _tab = e.key),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      height: 36,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14),
+                                      decoration: BoxDecoration(
+                                        color: _tab == e.key
+                                            ? AppColors.primary
+                                            : AppColors.surface,
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(e.value,
+                                          style: GoogleFonts.poppins(
+                                              color: _tab == e.key
+                                                  ? Colors.white
+                                                  : AppColors.textSecondary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600)),
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    ]),
+                  );
+                },
               ),
 
               // ── Tab content ──────────────────────────────────────────────
@@ -292,7 +365,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 child: IndexedStack(
                   index: _tab,
                   children: [
-                    _StudentsTab(cls: cls),
+                    _StudentsTab(
+                      cls: cls,
+                      selectionMode: _selectionMode,
+                      selectedIds: _selectedIds,
+                    ),
                     _TestsTab(cls: cls),
                     const _MaterialTab(),
                   ],
@@ -310,7 +387,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
 class _StudentsTab extends StatefulWidget {
   final ClassModel cls;
-  const _StudentsTab({required this.cls});
+  final ValueNotifier<bool> selectionMode;
+  final ValueNotifier<Set<String>> selectedIds;
+
+  const _StudentsTab({
+    required this.cls,
+    required this.selectionMode,
+    required this.selectedIds,
+  });
 
   @override
   State<_StudentsTab> createState() => _StudentsTabState();
@@ -319,6 +403,7 @@ class _StudentsTab extends StatefulWidget {
 class _StudentsTabState extends State<_StudentsTab> {
   Stream<List<UserModel>>? _stream;
   List<String> _lastUids = [];
+  bool _removing = false;
 
   static const _avatarColors = [
     AppColors.primary,
@@ -338,7 +423,6 @@ class _StudentsTabState extends State<_StudentsTab> {
   @override
   void didUpdateWidget(_StudentsTab old) {
     super.didUpdateWidget(old);
-    // Only recreate the stream if the student list actually changed
     final newUids = widget.cls.studentIds;
     if (!_listEquals(newUids, _lastUids)) {
       _rebuildStream(newUids);
@@ -369,6 +453,85 @@ class _StudentsTabState extends State<_StudentsTab> {
     return true;
   }
 
+  void _toggleSelection(String id) {
+    final current = Set<String>.from(widget.selectedIds.value);
+    if (current.contains(id)) {
+      current.remove(id);
+    } else {
+      current.add(id);
+    }
+    widget.selectedIds.value = current;
+  }
+
+  Future<void> _confirmRemove(BuildContext ctx) async {
+    if (_removing) return;
+    final ids = widget.selectedIds.value.toList();
+    if (ids.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Remove Students',
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+        content: Text(
+          'Remove ${ids.length} student${ids.length == 1 ? '' : 's'} from this class? This cannot be undone.',
+          style: GoogleFonts.poppins(
+              color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Remove',
+                style: GoogleFonts.poppins(
+                    color: AppColors.error, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return; // dialog dismissed — preserve selection
+    if (!mounted) return;
+
+    setState(() => _removing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final err = await context.read<AppState>().removeStudents(
+          classId: widget.cls.id,
+          studentIds: ids,
+        );
+    if (!mounted) return;
+    setState(() => _removing = false);
+
+    if (err != null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(err, style: GoogleFonts.poppins(color: Colors.white)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      // Stay in selection mode on error
+    } else {
+      widget.selectionMode.value = false;
+      widget.selectedIds.value = {};
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          'Removed ${ids.length} student${ids.length == 1 ? '' : 's'}',
+          style: GoogleFonts.poppins(color: Colors.white),
+        ),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.cls.studentIds.isEmpty) {
@@ -392,143 +555,318 @@ class _StudentsTabState extends State<_StudentsTab> {
     return StreamBuilder<List<UserModel>>(
       stream: _stream,
       builder: (context, snapshot) {
-        // Show previous data while loading — no flash
         final students = snapshot.data ?? [];
-        final loading = snapshot.connectionState == ConnectionState.waiting
-            && students.isEmpty;
+        final loading = snapshot.connectionState == ConnectionState.waiting &&
+            students.isEmpty;
 
         if (loading) {
           return const Center(
               child: CircularProgressIndicator(color: AppColors.primary));
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.all(24),
-          itemCount: students.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) {
-            if (i == students.length) {
-              return _ShareCodeCard(classCode: widget.cls.classCode);
-            }
+        return ValueListenableBuilder<bool>(
+          valueListenable: widget.selectionMode,
+          builder: (context, inSelection, _) {
+            return Stack(
+              children: [
+                // ── Student list ──────────────────────────────────────────
+                ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
+                  itemCount: students.length + (inSelection ? 0 : 1),
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) {
+                    // Share code card at the bottom (normal mode only)
+                    if (!inSelection && i == students.length) {
+                      return _ShareCodeCard(classCode: widget.cls.classCode);
+                    }
 
-            final s = students[i];
-            final color = _avatarColors[i % _avatarColors.length];
+                    final s = students[i];
+                    final color = _avatarColors[i % _avatarColors.length];
 
-            return Dismissible(
-              key: Key(s.id),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.errorLight,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Symbols.person_remove,
-                    color: AppColors.error, size: 22),
-              ),
-              confirmDismiss: (_) async {
-                return await showDialog<bool>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    backgroundColor: AppColors.surface2,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    title: Text('Remove Student',
-                        style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700)),
-                    content: Text(
-                        'Remove ${s.name} from this class?',
-                        style: GoogleFonts.poppins(
-                            color: AppColors.textSecondary)),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: Text('Cancel',
-                            style: GoogleFonts.poppins(
-                                color: AppColors.textSecondary)),
+                    if (inSelection) {
+                      return ValueListenableBuilder<Set<String>>(
+                        valueListenable: widget.selectedIds,
+                        builder: (_, ids, __) {
+                          final selected = ids.contains(s.id);
+                          return GestureDetector(
+                            onTap: () => _toggleSelection(s.id),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              height: 64,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? AppColors.primary.withValues(alpha: 0.08)
+                                    : AppColors.surface,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border(
+                                  left: BorderSide(
+                                    color: selected
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    width: 3,
+                                  ),
+                                ),
+                              ),
+                              child: Row(children: [
+                                // Circular checkbox
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: selected
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: selected
+                                          ? AppColors.primary
+                                          : AppColors.textMuted,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: selected
+                                      ? const Icon(Icons.check_rounded,
+                                          color: Colors.white, size: 14)
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor:
+                                      color.withValues(alpha: 0.2),
+                                  child: Text(s.avatarInitials,
+                                      style: GoogleFonts.poppins(
+                                          color: color,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Text(s.name,
+                                          style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600)),
+                                      Text(s.email,
+                                          style: GoogleFonts.poppins(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 11),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis),
+                                    ],
+                                  ),
+                                ),
+                              ]),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    // Normal mode — Dismissible
+                    return Dismissible(
+                      key: Key(s.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        decoration: BoxDecoration(
+                          color: AppColors.errorLight,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Symbols.person_remove,
+                            color: AppColors.error, size: 22),
                       ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: Text('Remove',
-                            style: GoogleFonts.poppins(
-                                color: AppColors.error,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              onDismissed: (_) async {
-                final err = await context
-                    .read<AppState>()
-                    .removeStudent(
-                        classId: widget.cls.id, studentId: s.id);
-                if (err != null && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(err,
-                        style: GoogleFonts.poppins(color: Colors.white)),
-                    backgroundColor: AppColors.error,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ));
-                }
-              },
-              child: Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
+                      confirmDismiss: (_) async {
+                        return await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            backgroundColor: AppColors.surface2,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            title: Text('Remove Student',
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700)),
+                            content: Text(
+                                'Remove ${s.name} from this class?',
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.textSecondary)),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, false),
+                                child: Text('Cancel',
+                                    style: GoogleFonts.poppins(
+                                        color: AppColors.textSecondary)),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, true),
+                                child: Text('Remove',
+                                    style: GoogleFonts.poppins(
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      onDismissed: (_) async {
+                        final err = await context
+                            .read<AppState>()
+                            .removeStudent(
+                                classId: widget.cls.id, studentId: s.id);
+                        if (err != null && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(err,
+                                style:
+                                    GoogleFonts.poppins(color: Colors.white)),
+                            backgroundColor: AppColors.error,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ));
+                        }
+                      },
+                      child: Container(
+                        height: 64,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: color.withValues(alpha: 0.2),
+                            child: Text(s.avatarInitials,
+                                style: GoogleFonts.poppins(
+                                    color: color,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(s.name,
+                                    style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                                Text(s.email,
+                                    style: GoogleFonts.poppins(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 11),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            height: 24,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.successLight,
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text('Active',
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.success,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ]),
+                      ).animate().fadeIn(delay: (i * 50).ms),
+                    );
+                  },
                 ),
-                child: Row(children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: color.withValues(alpha: 0.2),
-                    child: Text(s.avatarInitials,
-                        style: GoogleFonts.poppins(
-                            color: color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(s.name,
-                            style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600)),
-                        Text(s.email,
-                            style: GoogleFonts.poppins(
-                                color: AppColors.textSecondary,
-                                fontSize: 11),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ],
+
+                // ── Floating Remove button (selection mode) ───────────────
+                if (inSelection)
+                  Positioned(
+                    left: 24,
+                    right: 24,
+                    bottom: 24,
+                    child: ValueListenableBuilder<Set<String>>(
+                      valueListenable: widget.selectedIds,
+                      builder: (_, ids, __) {
+                        final hasSelection = ids.isNotEmpty;
+                        return AnimatedSlide(
+                          offset: hasSelection
+                              ? Offset.zero
+                              : const Offset(0, 1.5),
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeOutCubic,
+                          child: AnimatedOpacity(
+                            opacity: hasSelection ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: GestureDetector(
+                              onTap: _removing
+                                  ? null
+                                  : () => _confirmRemove(context),
+                              child: Container(
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.error
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: _removing
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Symbols.person_remove,
+                                              color: Colors.white, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Remove (${ids.length})',
+                                            style: GoogleFonts.poppins(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  Container(
-                    height: 24,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.successLight,
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text('Active',
-                        style: GoogleFonts.poppins(
-                            color: AppColors.success,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ]),
-              ).animate().fadeIn(delay: (i * 50).ms),
+              ],
             );
           },
         );
@@ -590,8 +928,7 @@ class _TestsTab extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final t = tests[i];
-        final attempts =
-            context.read<AppState>().attemptsForTest(t.id);
+        final attempts = context.read<AppState>().attemptsForTest(t.id);
 
         return GestureDetector(
           onTap: () => Navigator.push(
@@ -773,11 +1110,13 @@ class _ClassMenuSheet extends StatelessWidget {
   final ClassModel cls;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onRemoveStudents;
 
   const _ClassMenuSheet({
     required this.cls,
     required this.onEdit,
     required this.onDelete,
+    this.onRemoveStudents,
   });
 
   @override
@@ -840,6 +1179,18 @@ class _ClassMenuSheet extends StatelessWidget {
         ),
 
         const SizedBox(height: 8),
+
+        // Remove Students option (only when there are students)
+        if (onRemoveStudents != null) ...[
+          _MenuOption(
+            icon: Symbols.person_remove,
+            iconColor: AppColors.warning,
+            label: 'Remove Students',
+            subtitle: 'Select and remove students from this class',
+            onTap: onRemoveStudents!,
+          ),
+          const SizedBox(height: 8),
+        ],
 
         // Delete option
         _MenuOption(
