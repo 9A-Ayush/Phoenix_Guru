@@ -130,9 +130,11 @@ class AppState extends ChangeNotifier {
   /// Handles auth state changes AFTER initial boot (e.g. logout from another device).
   Future<void> _onAuthChanged(User? user) async {
     if (user != null) {
-      // User signed in elsewhere or token refreshed.
-      // Skip if we're in needsRolePicker — the Google sign-in flow is still
-      // in progress and will handle its own state transition.
+      // A new sign-in happened (Google or email).
+      // If signInWithGoogle() or login() already set _currentUser, do nothing —
+      // those methods manage their own state transitions.
+      // Only act if we have a Firebase user but no app-level user loaded yet
+      // AND we're not mid-Google-flow (needsRolePicker).
       if (_currentUser == null && _authStatus != AuthStatus.needsRolePicker) {
         _authStatus = AuthStatus.checking;
         notifyListeners();
@@ -141,13 +143,14 @@ class AppState extends ChangeNotifier {
           _authStatus = AuthStatus.authenticated;
           _initStreams();
         } else {
-          await _auth.signOut();
+          // No profile found — could be a new Google user whose role hasn't
+          // been saved yet. Don't sign them out here; let the UI handle it.
           _authStatus = AuthStatus.unauthenticated;
         }
         notifyListeners();
       }
     } else {
-      // User signed out — but only reset if we're not mid-Google-flow.
+      // Sign-out event — only reset if we're not mid-Google-flow.
       if (_authStatus != AuthStatus.needsRolePicker) {
         _currentUser = null;
         _authStatus = AuthStatus.unauthenticated;
@@ -297,20 +300,26 @@ class AppState extends ChangeNotifier {
   /// Called from RolePickerScreen after the user picks a role.
   /// Writes the full user document to Firestore and transitions to authenticated.
   Future<String?> saveGoogleUserRole(UserRole role) async {
-    if (_currentUser == null || _auth.currentUser == null) {
+    // Capture everything we need before any async gap.
+    final firebaseUser = _auth.currentUser;
+    final partialUser = _currentUser;
+
+    if (firebaseUser == null || partialUser == null) {
       return 'Session expired. Please sign in again.';
     }
+
     try {
-      _currentUser = UserModel(
-        id: _auth.currentUser!.uid,
-        name: _currentUser!.name,
-        email: _currentUser!.email,
+      final user = UserModel(
+        id: firebaseUser.uid,
+        name: partialUser.name,
+        email: partialUser.email,
         role: role,
       );
       await _firestore
           .collection('users')
-          .doc(_auth.currentUser!.uid)
-          .set(_currentUser!.toMap());
+          .doc(firebaseUser.uid)
+          .set(user.toMap());
+      _currentUser = user;
       _authStatus = AuthStatus.authenticated;
       _initStreams();
       notifyListeners();
