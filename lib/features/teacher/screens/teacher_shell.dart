@@ -470,6 +470,7 @@ class TeacherProfilePage extends StatelessWidget {
         child: Column(children: [
           Container(
             height: 240,
+            width: double.infinity,
             decoration: const BoxDecoration(gradient: LinearGradient(
                 colors: [Color(0xFF1C1240), AppColors.bg], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
