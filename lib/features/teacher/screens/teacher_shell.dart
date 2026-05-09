@@ -909,39 +909,101 @@ class _MenuItem extends StatelessWidget {
 class TeacherQuizPage extends StatelessWidget {
   const TeacherQuizPage({super.key});
 
+  void _pickTest(BuildContext context, List<TestModel> tests) {
+    if (tests.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Create a test first to start a live quiz.',
+            style: GoogleFonts.poppins(color: Colors.white)),
+        backgroundColor: AppColors.warning,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        action: SnackBarAction(
+          label: 'Create',
+          textColor: Colors.white,
+          onPressed: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CreateTestScreen())),
+        ),
+      ));
+      return;
+    }
+
+    if (tests.length == 1) {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => TeacherLiveQuizScreen(test: tests.first)));
+      return;
+    }
+
+    // Multiple tests — show picker
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: false,
+      builder: (_) => _TestPickerSheet(
+        tests: tests,
+        onSelect: (t) {
+          Navigator.pop(context);
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => TeacherLiveQuizScreen(test: t)));
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Use watch so the button reacts when tests load from Firestore
+    final tests = context.watch<AppState>().allTests;
+
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Live Quiz', style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+          Text('Live Quiz',
+              style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700)),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: () {
-              final tests = context.read<AppState>().allTests;
-              if (tests.isNotEmpty) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => TeacherLiveQuizScreen(test: tests.first)));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Create a test first to start a live quiz.')));
-              }
-            },
+            onTap: () => _pickTest(context, tests),
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppColors.primary, AppColors.accent], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.accent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(children: [
-                Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(18)),
-                    child: const Icon(Symbols.live_tv, color: Colors.white, size: 32)),
+                Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(18)),
+                  child: const Icon(Symbols.live_tv, color: Colors.white, size: 32),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Start Live Quiz', style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text('Host a real-time quiz session', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13)),
-                ])),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text('Start Live Quiz',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(
+                      tests.isEmpty
+                          ? 'No tests yet — create one first'
+                          : '${tests.length} test${tests.length == 1 ? '' : 's'} available',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white70, fontSize: 13),
+                    ),
+                  ]),
+                ),
                 const Icon(Symbols.arrow_forward, color: Colors.white, size: 22),
               ]),
             ),
@@ -949,50 +1011,198 @@ class TeacherQuizPage extends StatelessWidget {
           const SizedBox(height: 16),
           // View Test Results card
           GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherTestResultsScreen())),            child: Container(
-              height: 76, padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const TeacherTestResultsScreen())),
+            child: Container(
+              height: 76,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border)),
               child: Row(children: [
-                Container(width: 46, height: 46, decoration: BoxDecoration(color: AppColors.successLight, borderRadius: BorderRadius.circular(14)),
-                    child: const Icon(Symbols.bar_chart, color: AppColors.success, size: 24)),
+                Container(
+                  width: 46, height: 46,
+                  decoration: BoxDecoration(
+                      color: AppColors.successLight,
+                      borderRadius: BorderRadius.circular(14)),
+                  child: const Icon(Symbols.bar_chart,
+                      color: AppColors.success, size: 24),
+                ),
                 const SizedBox(width: 14),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('Test Results', style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                  Text('View scores, grades & flagged questions', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 12)),
-                ])),
-                const Icon(Symbols.chevron_right, color: AppColors.textMuted, size: 20),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                    Text('Test Results',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                    Text('View scores, grades & flagged questions',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.textSecondary, fontSize: 12)),
+                  ]),
+                ),
+                const Icon(Symbols.chevron_right,
+                    color: AppColors.textMuted, size: 20),
               ]),
             ),
           ),
           const SizedBox(height: 24),
-          Text('How Live Quiz Works', style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+          Text('How Live Quiz Works',
+              style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           ...[
-            (Symbols.settings, AppColors.primary, '1. Select a test', 'Choose a test you have created'),
-            (Symbols.wifi_tethering, AppColors.warning, '2. Share PIN', 'Students enter the 6-digit PIN to join'),
-            (Symbols.play_arrow, AppColors.success, '3. Start & Control', 'Reveal answers and move to next questions'),
-            (Symbols.bar_chart, AppColors.accent, '4. View Results', 'See scores, rankings and flagged answers'),
+            (Symbols.settings, AppColors.primary, '1. Select a test',
+                'Choose a test you have created'),
+            (Symbols.wifi_tethering, AppColors.warning, '2. Share PIN',
+                'Students enter the 6-digit PIN to join'),
+            (Symbols.play_arrow, AppColors.success, '3. Start & Control',
+                'Reveal answers and move to next questions'),
+            (Symbols.bar_chart, AppColors.accent, '4. View Results',
+                'See scores, rankings and flagged answers'),
           ].asMap().entries.map((e) {
             final s = e.value;
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Container(
-                height: 64, padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
+                height: 64,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14)),
                 child: Row(children: [
-                  Container(width: 38, height: 38, decoration: BoxDecoration(color: s.$2.withOpacity(0.13), borderRadius: BorderRadius.circular(12)),
-                      child: Icon(s.$1, color: s.$2, size: 20)),
+                  Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(
+                        color: s.$2.withValues(alpha: 0.13),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Icon(s.$1, color: s.$2, size: 20),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(s.$3, style: GoogleFonts.poppins(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    Text(s.$4, style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 11)),
-                  ])),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Text(s.$3,
+                          style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
+                      Text(s.$4,
+                          style: GoogleFonts.poppins(
+                              color: AppColors.textSecondary, fontSize: 11)),
+                    ]),
+                  ),
                 ]),
               ),
             );
           }),
         ]),
       ),
+    );
+  }
+}
+
+// ── Test picker sheet ─────────────────────────────────────────────────────────
+
+class _TestPickerSheet extends StatelessWidget {
+  final List<TestModel> tests;
+  final void Function(TestModel) onSelect;
+
+  const _TestPickerSheet({required this.tests, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2)),
+        ),
+        const SizedBox(height: 16),
+        Text('Select a Test',
+            style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text('Choose which test to run as a live quiz',
+            style: GoogleFonts.poppins(
+                color: AppColors.textSecondary, fontSize: 13)),
+        const SizedBox(height: 16),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.45,
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: tests.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (_, i) {
+              final t = tests[i];
+              return GestureDetector(
+                onTap: () => onSelect(t),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 42, height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Symbols.assignment,
+                          color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(t.title,
+                            style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        Text(
+                          '${t.className}  •  ${t.questionCount} questions  •  ${t.durationMinutes} mins',
+                          style: GoogleFonts.poppins(
+                              color: AppColors.textSecondary,
+                              fontSize: 11),
+                        ),
+                      ]),
+                    ),
+                    const Icon(Symbols.play_arrow,
+                        color: AppColors.primary, size: 20),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
+      ]),
     );
   }
 }
