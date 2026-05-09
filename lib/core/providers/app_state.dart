@@ -45,6 +45,9 @@ class AppState extends ChangeNotifier {
   bool get isTeacher => _currentUser?.role == UserRole.teacher;
   bool get isStudent => _currentUser?.role == UserRole.student;
 
+  /// Exposed for screens that need direct Firestore access (e.g. student streams).
+  FirebaseFirestore get firestoreInstance => _firestore;
+
   /// Resolves when the initial auth check is complete.
   /// Splash screen should `await` this.
   Future<void> get initialized => _initCompleter.future;
@@ -413,6 +416,45 @@ class AppState extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return cls;
+  }
+
+  /// Removes a student from a class by updating studentIds in Firestore.
+  Future<String?> removeStudent({
+    required String classId,
+    required String studentId,
+  }) async {
+    try {
+      await _firestore.collection('classes').doc(classId).update({
+        'studentIds': FieldValue.arrayRemove([studentId]),
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Returns a real-time stream of the class document.
+  Stream<ClassModel?> classStream(String classId) {
+    return _firestore
+        .collection('classes')
+        .doc(classId)
+        .snapshots()
+        .map((doc) => doc.exists && doc.data() != null
+            ? ClassModel.fromMap(doc.data()!)
+            : null);
+  }
+
+  /// Fetches a user profile by UID from Firestore (one-time).
+  Future<UserModel?> fetchUser(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return UserModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String?> joinClass(String code) async {
