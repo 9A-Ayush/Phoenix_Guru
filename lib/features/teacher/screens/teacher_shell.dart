@@ -511,27 +511,38 @@ class _TestCard extends StatelessWidget {
         // ── Stats row ─────────────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(children: [
-            _Stat(icon: Symbols.timer, label: '${test.durationMinutes} mins'),
-            const SizedBox(width: 16),
-            _Stat(icon: Symbols.help, label: '${test.questionCount} Qs'),
-            const SizedBox(width: 16),
-            _Stat(icon: Symbols.person, label: '${ attempts.length} done'),
-            if (test.expiresAt != null) ...[
-              const Spacer(),
-              Row(children: [
-                const Icon(Symbols.calendar_month,
-                    color: AppColors.textMuted, size: 13),
-                const SizedBox(width: 4),
-                Text(formatDateTime(test.expiresAt!),
-                    style: GoogleFonts.poppins(
-                        color: test.isExpired
-                            ? AppColors.error
-                            : AppColors.textMuted,
-                        fontSize: 11)),
-              ]),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Wrap(
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _Stat(icon: Symbols.timer, label: '${test.durationMinutes} mins'),
+                  _Stat(icon: Symbols.help, label: '${test.questionCount} Qs'),
+                  _Stat(icon: Symbols.person, label: '${ attempts.length} done'),
+                ],
+              ),
+              if (test.expiresAt != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Symbols.calendar_month,
+                        color: AppColors.textMuted, size: 13),
+                    const SizedBox(width: 4),
+                    Text(formatDateTime(test.expiresAt!),
+                        style: GoogleFonts.poppins(
+                            color: test.isExpired
+                                ? AppColors.error
+                                : AppColors.textMuted,
+                            fontSize: 11)),
+                  ],
+                ),
             ],
-          ]),
+          ),
         ),
       ]),
     );
