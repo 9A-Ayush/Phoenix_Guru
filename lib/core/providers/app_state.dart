@@ -358,6 +358,46 @@ class AppState extends ChangeNotifier {
     return e.toString();
   }
 
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  /// Updates the user's display name in Firestore and local state.
+  Future<String?> updateProfile({required String name}) async {
+    if (_currentUser == null || _auth.currentUser == null) return 'Not logged in';
+    try {
+      final updated = _currentUser!.copyWith(name: name);
+      await _firestore
+          .collection('users')
+          .doc(_currentUser!.id)
+          .update({'name': name});
+      _currentUser = updated;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Re-authenticates then changes the Firebase Auth password.
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null || firebaseUser.email == null) return 'Not logged in';
+    try {
+      // Re-authenticate first
+      final cred = EmailAuthProvider.credential(
+        email: firebaseUser.email!,
+        password: currentPassword,
+      );
+      await firebaseUser.reauthenticateWithCredential(cred);
+      await firebaseUser.updatePassword(newPassword);
+      return null;
+    } catch (e) {
+      return _friendlyAuthError(e);
+    }
+  }
+
   // ── Classes ───────────────────────────────────────────────────────────────
 
   Future<ClassModel> createClass({required String name, required String subject, required String description}) async {

@@ -5,7 +5,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
-import '../../../core/models.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/screens/login_screen.dart';
 import 'create_class_screen.dart';
@@ -13,6 +12,10 @@ import 'create_test_screen.dart';
 import 'class_detail_screen.dart';
 import 'live_quiz_host_screen.dart';
 import 'test_results_screen.dart';
+import 'edit_profile_screen.dart';
+import 'change_password_screen.dart';
+import 'notifications_screen.dart';
+import 'help_support_screen.dart';
 
 // ── Shell ────────────────────────────────────────────────────────────────────
 
@@ -494,13 +497,17 @@ class TeacherProfilePage extends StatelessWidget {
               ]),
             ),
             const SizedBox(height: 16),
-            MenuRow(icon: Symbols.person, iconColor: AppColors.primary, label: 'Edit Profile'),
+            MenuRow(icon: Symbols.person, iconColor: AppColors.primary, label: 'Edit Profile',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
             const SizedBox(height: 10),
-            MenuRow(icon: Symbols.notifications, iconColor: AppColors.warning, label: 'Notifications'),
+            MenuRow(icon: Symbols.notifications, iconColor: AppColors.warning, label: 'Notifications',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
             const SizedBox(height: 10),
-            MenuRow(icon: Symbols.lock, iconColor: AppColors.success, label: 'Change Password'),
+            MenuRow(icon: Symbols.lock, iconColor: AppColors.success, label: 'Change Password',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()))),
             const SizedBox(height: 10),
-            MenuRow(icon: Symbols.help, iconColor: AppColors.textSecondary, label: 'Help & Support'),
+            MenuRow(icon: Symbols.help, iconColor: AppColors.textSecondary, label: 'Help & Support',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()))),
             const SizedBox(height: 20),
             GestureDetector(
               onTap: () {
