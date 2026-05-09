@@ -39,8 +39,7 @@
         { "fieldPath": "pin", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
-    },
-    {
+    },    {
       "collectionGroup": "participants",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

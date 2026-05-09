@@ -554,7 +554,11 @@ class AppState extends ChangeNotifier {
       final existing = await _firestore
           .collection('live_sessions')
           .where('pin', isEqualTo: pin)
-          .where('status', whereNotIn: ['ended'])
+          .where('status', whereIn: [
+            LiveSessionStatus.waiting.name,
+            LiveSessionStatus.active.name,
+            LiveSessionStatus.showingResult.name,
+          ])
           .get();
       if (existing.docs.isEmpty) break;
       attempts++;
@@ -615,7 +619,11 @@ class AppState extends ChangeNotifier {
       final snap = await _firestore
           .collection('live_sessions')
           .where('pin', isEqualTo: pin)
-          .where('status', whereNotIn: ['ended'])
+          .where('status', whereIn: [
+            LiveSessionStatus.waiting.name,
+            LiveSessionStatus.active.name,
+            LiveSessionStatus.showingResult.name,
+          ])
           .limit(1)
           .get();
       if (snap.docs.isEmpty) return null;

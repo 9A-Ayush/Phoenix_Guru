@@ -81,6 +81,7 @@ class QuizService {
         .where('status', whereIn: [
           LiveSessionStatus.waiting.name,
           LiveSessionStatus.active.name,
+          LiveSessionStatus.showingResult.name,
         ])
         .limit(1)
         .get();
