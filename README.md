@@ -115,7 +115,11 @@ Firebase Auth (Email/Password + Google Sign-In)
 ### Tests & Attempts
 | Method | Description |
 |---|---|
-| `createTest(title, classId, duration, questions)` | Creates test in Firestore |
+| `createTest(title, classId, duration, questions, expiresAt, maxAttempts)` | Creates test in Firestore |
+| `updateTest(testId, title, questions)` | Updates test title and questions |
+| `extendTestExpiry(testId, newExpiry)` | Updates expiresAt in Firestore |
+| `toggleTestPublish(testId, isLive)` | Toggles isLive (publish/unpublish) |
+| `deleteTest(testId)` | Batch-deletes test + all its attempts |
 | `submitAttempt(testId, testTitle, answers)` | Saves student attempt to Firestore |
 | `testsForClass(classId)` | Filtered getter from streamed tests |
 | `attemptsForTest(testId)` | Filtered getter from streamed attempts |
@@ -149,7 +153,7 @@ notificationPrefs   Map      classActivity, testReminders, studentJoins, quizRes
 |---|---|
 | `UserModel` | id, name, email, role, createdAt, avatarInitials |
 | `ClassModel` | id, name, subject, description, teacherId, classCode, studentIds, createdAt |
-| `TestModel` | id, title, classId, questions, durationMinutes, isLive, scheduledAt |
+| `TestModel` | id, title, classId, questions, durationMinutes, isLive, scheduledAt, expiresAt, maxAttempts |
 | `QuizQuestion` | id, question, options[4], correctIndex |
 | `QuizAttempt` | id, testId, userId, userName, answers (Map), completedAt |
 
@@ -208,13 +212,14 @@ notificationPrefs   Map      classActivity, testReminders, studentJoins, quizRes
 | T05 | Profile | Stats, gradient avatar + Teacher badge |
 | T06 | Class Detail | Real-time students/tests/material tabs, three-dot menu |
 | T07 | Create Class | Subject dropdown, description, auto class code |
-| T08 | Create Test | Question builder dialog, class picker |
-| T09 | Live Quiz Host | Real-time answer distribution, reveal/next controls |
-| T10 | Test Results | Live Firestore scores, grade bars, flagged questions |
-| T11 | Edit Profile | Name edit → Firestore save |
-| T12 | Change Password | Re-auth + Firebase Auth update |
-| T13 | Notifications | 5 toggles → Firestore `notificationPrefs` |
-| T14 | Help & Support | FAQ accordion (7 items) + contact cards |
+| T08 | Create Test | Question builder, date+time picker, allowed attempts (1/2) |
+| T09 | Edit Test | Edit name, add/remove questions, extend expiry |
+| T10 | Live Quiz Host | Real-time answer distribution, reveal/next controls |
+| T11 | Test Results | Live Firestore scores, grade bars, flagged questions |
+| T12 | Edit Profile | Name edit → Firestore save |
+| T13 | Change Password | Re-auth + Firebase Auth update |
+| T14 | Notifications | 5 toggles → Firestore `notificationPrefs` |
+| T15 | Help & Support | FAQ accordion (7 items) + contact cards |
 
 ---
 
@@ -293,6 +298,9 @@ Splash (awaits AppState.initialized)
 
 ### Edit / Delete Class
 `ClassDetailScreen` three-dot menu → `updateClass()` or `deleteClass()` (batch: class + tests) → Firestore
+
+### Edit / Delete Test
+`TeacherTestsPage` three-dot menu → `EditTestScreen` (name/questions/expiry) or `deleteTest()` (batch: test + attempts) or `toggleTestPublish()` or `extendTestExpiry()`
 
 ### Join Class (Student)
 `_JoinClassSheet` → `AppState.joinClass(code)` → Firestore query by `classCode` → `arrayUnion` on `studentIds`
