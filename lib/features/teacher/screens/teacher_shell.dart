@@ -79,8 +79,7 @@ class TeacherDashboard extends StatelessWidget {
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
             ]),
             Row(children: [
-              CircleAvatar(radius: 22, backgroundColor: AppColors.primary,
-                  child: Text(user.avatarInitials, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
+              GradientAvatar(initials: user.avatarInitials, radius: 22, fontSize: 16),
               const SizedBox(width: 8),
               Container(
                 height: 28, padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -475,8 +474,7 @@ class TeacherProfilePage extends StatelessWidget {
                 colors: [Color(0xFF1C1240), AppColors.bg], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               const SizedBox(height: 40),
-              CircleAvatar(radius: 40, backgroundColor: AppColors.primary,
-                  child: Text(user.avatarInitials, style: GoogleFonts.poppins(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700))),
+              GradientAvatar(initials: user.avatarInitials, radius: 40, fontSize: 28),
               const SizedBox(height: 12),
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
               Text(user.email, style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),

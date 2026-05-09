@@ -518,3 +518,52 @@ class _GoogleLogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(_) => false;
 }
+
+
+// ── Gradient Avatar ───────────────────────────────────────────────────────────
+
+class GradientAvatar extends StatelessWidget {
+  final String initials;
+  final double radius;
+  final double fontSize;
+
+  const GradientAvatar({
+    super.key,
+    required this.initials,
+    this.radius = 22,
+    this.fontSize = 16,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = radius * 2;
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF9B7BFF), Color(0xFF5B2FD4)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x556C47FF),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
