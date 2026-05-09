@@ -478,8 +478,46 @@ class TeacherProfilePage extends StatelessWidget {
                 colors: [Color(0xFF1C1240), AppColors.bg], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               const SizedBox(height: 40),
-              GradientAvatar(initials: user.avatarInitials, radius: 40, fontSize: 28),
-              const SizedBox(height: 12),
+              Stack(
+                alignment: Alignment.bottomCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  GradientAvatar(initials: user.avatarInitials, radius: 40, fontSize: 28),
+                  Positioned(
+                    bottom: -10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9B7BFF), Color(0xFF5B2FD4)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.bg, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Symbols.school, color: Colors.white, size: 11),
+                        const SizedBox(width: 4),
+                        Text('TEACHER',
+                            style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5)),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
               Text(user.email, style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
             ]),
