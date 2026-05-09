@@ -20,7 +20,8 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   final _titleCtrl = TextEditingController();
   int _duration = 60;
   String? _selectedClassId;
-  DateTime? _expiresAt;
+  DateTime? _expiresAt;   // stores full date + time
+  int _maxAttempts = 1;
   bool _loading = false;
   final List<_QuestionData> _questions = [];
 
@@ -37,77 +38,79 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   @override
   void dispose() { _titleCtrl.dispose(); super.dispose(); }
 
-  Future<void> _pickDate() async {
+  // ── Date + time picker ────────────────────────────────────────────────────
+
+  ThemeData get _calendarTheme => ThemeData.dark().copyWith(
+    colorScheme: const ColorScheme.dark(
+      primary: Color(0xFF5B2FD4),
+      onPrimary: Colors.white,
+      surface: Color(0xFF0A0A0A),
+      onSurface: Colors.white,
+      secondary: Color(0xFF5B2FD4),
+      onSecondary: Colors.white,
+    ),
+    dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0A0A0A)),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: const Color(0xFF5B2FD4),
+        textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
+    ),
+    textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+  );
+
+  Future<void> _pickDateTime() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    final picked = await showDatePicker(
+    // Step 1 — pick date
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: _expiresAt ?? today.add(const Duration(days: 1)),
-      firstDate: today.add(const Duration(days: 1)), // no past or today
+      firstDate: today.add(const Duration(days: 1)),
       lastDate: DateTime(now.year + 2),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF5B2FD4),       // selected day bg
-              onPrimary: Colors.white,           // selected day text
-              surface: Color(0xFF0A0A0A),        // calendar bg
-              onSurface: Colors.white,           // day text
-              secondary: Color(0xFF5B2FD4),
-              onSecondary: Colors.white,
-            ),
-            dialogBackgroundColor: const Color(0xFF0A0A0A),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF0A0A0A),
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF5B2FD4),
-                textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-              ),
-            ),
-            textTheme: GoogleFonts.poppinsTextTheme(
-              ThemeData.dark().textTheme,
-            ),
-          ),
-          child: child!,
-        );
-      },
+      builder: (_, child) => Theme(data: _calendarTheme, child: child!),
     );
+    if (pickedDate == null || !mounted) return;
 
-    if (picked != null) {
-      setState(() => _expiresAt = picked);
-    }
+    // Step 2 — pick time
+    final initialTime = _expiresAt != null
+        ? TimeOfDay(hour: _expiresAt!.hour, minute: _expiresAt!.minute)
+        : const TimeOfDay(hour: 23, minute: 59);
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (_, child) => Theme(data: _calendarTheme, child: child!),
+    );
+    if (pickedTime == null) return;
+
+    setState(() {
+      _expiresAt = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
   }
 
-  String _formatDate(DateTime d) {
+  String _formatDateTime(DateTime d) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun',
                     'Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
+    final h = d.hour.toString().padLeft(2, '0');
+    final m = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year}  •  $h:$m';
   }
 
+  // ── Publish ───────────────────────────────────────────────────────────────
+
   Future<void> _publish() async {
-    // Validate form fields
     if (!_formKey.currentState!.validate()) return;
-
-    // Class validation
-    if (_selectedClassId == null) {
-      _showError('Please select a class');
-      return;
-    }
-
-    // Expiry date validation
-    if (_expiresAt == null) {
-      _showError('Please set an expiration date');
-      return;
-    }
-
-    // Questions validation
-    if (_questions.isEmpty) {
-      _showError('Add at least one question');
-      return;
-    }
+    if (_selectedClassId == null) { _showError('Please select a class'); return; }
+    if (_expiresAt == null)       { _showError('Please set an expiration date & time'); return; }
+    if (_questions.isEmpty)       { _showError('Add at least one question'); return; }
 
     setState(() => _loading = true);
     final questions = _questions.map((q) => QuizQuestion(
@@ -122,6 +125,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       durationMinutes: _duration,
       questions: questions,
       expiresAt: _expiresAt,
+      maxAttempts: _maxAttempts,
     );
     if (!mounted) return;
     Navigator.pop(context);
@@ -258,11 +262,11 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
 
               const SizedBox(height: 16),
 
-              // Expiration date
-              _Lbl('Expiration Date *'),
+              // Expiration Date & Time
+              _Lbl('Expiration Date & Time *'),
               const SizedBox(height: 8),
               GestureDetector(
-                onTap: _pickDate,
+                onTap: _pickDateTime,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   height: 52,
@@ -289,8 +293,8 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                     Expanded(
                       child: Text(
                         _expiresAt != null
-                            ? _formatDate(_expiresAt!)
-                            : 'Select expiration date',
+                            ? _formatDateTime(_expiresAt!)
+                            : 'Select date & time',
                         style: GoogleFonts.poppins(
                           color: _expiresAt != null
                               ? Colors.white
@@ -315,16 +319,106 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
               if (_expiresAt != null) ...[
                 const SizedBox(height: 6),
                 Row(children: [
-                  const Icon(Symbols.info,
-                      color: AppColors.textMuted, size: 13),
+                  const Icon(Symbols.info, color: AppColors.textMuted, size: 13),
                   const SizedBox(width: 6),
                   Text(
-                    'Test expires at midnight on ${_formatDate(_expiresAt!)}',
+                    'Test expires on ${_formatDateTime(_expiresAt!)}',
                     style: GoogleFonts.poppins(
                         color: AppColors.textMuted, fontSize: 11),
                   ),
                 ]),
               ],
+
+              const SizedBox(height: 16),
+
+              // Allowed Attempts
+              _Lbl('Allowed Attempts'),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: [1, 2].map((val) {
+                    final selected = _maxAttempts == val;
+                    return GestureDetector(
+                      onTap: () => setState(() => _maxAttempts = val),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 20, height: 20,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: selected
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: selected
+                                ? const Icon(Icons.check_rounded,
+                                    color: Colors.white, size: 12)
+                                : null,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  val == 1
+                                      ? '1 Attempt  —  Single try'
+                                      : '2 Attempts  —  Best score counts',
+                                  style: GoogleFonts.poppins(
+                                    color: selected
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                  ),
+                                ),
+                                Text(
+                                  val == 1
+                                      ? 'Student gets one chance only'
+                                      : 'Student can retry once, highest score saved',
+                                  style: GoogleFonts.poppins(
+                                      color: AppColors.textMuted,
+                                      fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (selected)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('Selected',
+                                  style: GoogleFonts.poppins(
+                                      color: AppColors.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                        ]),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.15, end: 0),
 
               const SizedBox(height: 24),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [

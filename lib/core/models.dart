@@ -160,6 +160,7 @@ class TestModel {
   final DateTime? scheduledAt;
   final DateTime? expiresAt;
   final bool isLive;
+  final int maxAttempts;
 
   TestModel({
     String? id,
@@ -171,6 +172,7 @@ class TestModel {
     this.scheduledAt,
     this.expiresAt,
     this.isLive = false,
+    this.maxAttempts = 1,
   }) : id = id ?? _uuid.v4();
 
   int get questionCount => questions.length;
@@ -189,6 +191,7 @@ class TestModel {
       'scheduledAt': scheduledAt?.toIso8601String(),
       'expiresAt': expiresAt?.toIso8601String(),
       'isLive': isLive,
+      'maxAttempts': maxAttempts,
     };
   }
 
@@ -203,6 +206,7 @@ class TestModel {
       scheduledAt: map['scheduledAt'] != null ? DateTime.parse(map['scheduledAt']) : null,
       expiresAt: map['expiresAt'] != null ? DateTime.parse(map['expiresAt']) : null,
       isLive: map['isLive'] ?? false,
+      maxAttempts: map['maxAttempts'] ?? 1,
     );
   }
 }

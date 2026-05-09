@@ -530,6 +530,7 @@ class AppState extends ChangeNotifier {
     required int durationMinutes,
     required List<QuizQuestion> questions,
     DateTime? expiresAt,
+    int maxAttempts = 1,
   }) async {
     _isLoading = true; notifyListeners();
     final cls = _classes.firstWhere((c) => c.id == classId);
@@ -540,6 +541,7 @@ class AppState extends ChangeNotifier {
       durationMinutes: durationMinutes,
       questions: questions,
       expiresAt: expiresAt,
+      maxAttempts: maxAttempts,
     );
     await _firestore.collection('tests').doc(test.id).set(test.toMap());
     _isLoading = false;
