@@ -406,8 +406,7 @@ class TeacherQuizPage extends StatelessWidget {
           const SizedBox(height: 16),
           // View Test Results card
           GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherTestResultsScreen())),
-            child: Container(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherTestResultsScreen())),            child: Container(
               height: 76, padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
               child: Row(children: [
