@@ -928,8 +928,7 @@ class TeacherQuizPage extends StatelessWidget {
     }
 
     if (tests.length == 1) {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => TeacherLiveQuizScreen(test: tests.first)));
+      _launchSession(context, tests.first);
       return;
     }
 
@@ -942,11 +941,34 @@ class TeacherQuizPage extends StatelessWidget {
         tests: tests,
         onSelect: (t) {
           Navigator.pop(context);
-          Navigator.push(context,
-              MaterialPageRoute(builder: (_) => TeacherLiveQuizScreen(test: t)));
+          _launchSession(context, t);
         },
       ),
     );
+  }
+
+  Future<void> _launchSession(BuildContext context, TestModel test) async {
+    // Show loading indicator
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+    final appState = context.read<AppState>();
+
+    // Create live session in Firestore
+    final session = await appState.startLiveSession(test);
+    if (session == null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Failed to create session. Check your connection.',
+            style: GoogleFonts.poppins(color: Colors.white)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      return;
+    }
+
+    nav.push(MaterialPageRoute(
+      builder: (_) => TeacherLiveQuizScreen(test: test, session: session),
+    ));
   }
 
   @override

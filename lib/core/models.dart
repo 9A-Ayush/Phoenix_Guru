@@ -161,6 +161,8 @@ class TestModel {
   final DateTime? expiresAt;
   final bool isLive;
   final int maxAttempts;
+  final String? pin;
+  final int currentQuestionIndex;
 
   TestModel({
     String? id,
@@ -173,7 +175,13 @@ class TestModel {
     this.expiresAt,
     this.isLive = false,
     this.maxAttempts = 1,
-  }) : id = id ?? _uuid.v4();
+    String? pin,
+    this.currentQuestionIndex = 0,
+  })  : id = id ?? _uuid.v4(),
+        pin = pin ?? _pinFromId(id ?? _uuid.v4());
+
+  static String _pinFromId(String id) =>
+      id.replaceAll('-', '').substring(0, 6).toUpperCase();
 
   int get questionCount => questions.length;
 
@@ -192,12 +200,15 @@ class TestModel {
       'expiresAt': expiresAt?.toIso8601String(),
       'isLive': isLive,
       'maxAttempts': maxAttempts,
+      'pin': pin,
+      'currentQuestionIndex': currentQuestionIndex,
     };
   }
 
   factory TestModel.fromMap(Map<String, dynamic> map) {
+    final id = map['id'] as String;
     return TestModel(
-      id: map['id'],
+      id: id,
       title: map['title'],
       classId: map['classId'],
       className: map['className'],
@@ -207,12 +218,204 @@ class TestModel {
       expiresAt: map['expiresAt'] != null ? DateTime.parse(map['expiresAt']) : null,
       isLive: map['isLive'] ?? false,
       maxAttempts: map['maxAttempts'] ?? 1,
+      pin: map['pin'] as String?,
+      currentQuestionIndex: map['currentQuestionIndex'] as int? ?? 0,
     );
   }
 }
 
-class QuizAttempt {
+// ── Live Session ──────────────────────────────────────────────────────────────
+
+enum LiveSessionStatus { waiting, active, showingResult, ended }
+
+class LiveSession {
   final String id;
+  final String testId;
+  final String testTitle;
+  final String hostId;
+  final String hostName;
+  final String pin;
+  final int currentQuestion;
+  final LiveSessionStatus status;
+  final DateTime createdAt;
+  final int participantCount;
+  final bool isLocked; // host can lock room to prevent new joins
+
+  const LiveSession({
+    required this.id,
+    required this.testId,
+    required this.testTitle,
+    required this.hostId,
+    required this.hostName,
+    required this.pin,
+    this.currentQuestion = 0,
+    this.status = LiveSessionStatus.waiting,
+    required this.createdAt,
+    this.participantCount = 0,
+    this.isLocked = false,
+  });
+
+  bool get isWaiting       => status == LiveSessionStatus.waiting;
+  bool get isActive        => status == LiveSessionStatus.active;
+  bool get isShowingResult => status == LiveSessionStatus.showingResult;
+  bool get isEnded         => status == LiveSessionStatus.ended;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'testId': testId,
+    'testTitle': testTitle,
+    'hostId': hostId,
+    'hostName': hostName,
+    'pin': pin,
+    'currentQuestion': currentQuestion,
+    'status': status.name,
+    'createdAt': createdAt.toIso8601String(),
+    'participantCount': participantCount,
+    'isLocked': isLocked,
+  };
+
+  factory LiveSession.fromMap(Map<String, dynamic> map) => LiveSession(
+    id: map['id'],
+    testId: map['testId'],
+    testTitle: map['testTitle'],
+    hostId: map['hostId'],
+    hostName: map['hostName'] ?? '',
+    pin: map['pin'],
+    currentQuestion: map['currentQuestion'] ?? 0,
+    status: LiveSessionStatus.values.byName(map['status'] ?? 'waiting'),
+    createdAt: DateTime.parse(map['createdAt']),
+    participantCount: map['participantCount'] ?? 0,
+    isLocked: map['isLocked'] ?? false,
+  );
+
+  LiveSession copyWith({
+    int? currentQuestion,
+    LiveSessionStatus? status,
+    int? participantCount,
+    bool? isLocked,
+  }) => LiveSession(
+    id: id,
+    testId: testId,
+    testTitle: testTitle,
+    hostId: hostId,
+    hostName: hostName,
+    pin: pin,
+    currentQuestion: currentQuestion ?? this.currentQuestion,
+    status: status ?? this.status,
+    createdAt: createdAt,
+    participantCount: participantCount ?? this.participantCount,
+    isLocked: isLocked ?? this.isLocked,
+  );
+}
+
+// ── Live Participant ──────────────────────────────────────────────────────────
+
+class LiveParticipant {
+  final String id;         // userId
+  final String sessionId;
+  final String name;
+  final String avatarInitials;
+  final int score;
+  final int rank;
+  final int answeredCount;
+  final int correctCount;
+  final DateTime joinedAt;
+
+  const LiveParticipant({
+    required this.id,
+    required this.sessionId,
+    required this.name,
+    required this.avatarInitials,
+    this.score = 0,
+    this.rank = 0,
+    this.answeredCount = 0,
+    this.correctCount = 0,
+    required this.joinedAt,
+  });
+
+  double get accuracy =>
+      answeredCount == 0 ? 0 : correctCount / answeredCount;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'sessionId': sessionId,
+    'name': name,
+    'avatarInitials': avatarInitials,
+    'score': score,
+    'rank': rank,
+    'answeredCount': answeredCount,
+    'correctCount': correctCount,
+    'joinedAt': joinedAt.toIso8601String(),
+  };
+
+  factory LiveParticipant.fromMap(Map<String, dynamic> map) => LiveParticipant(
+    id: map['id'],
+    sessionId: map['sessionId'],
+    name: map['name'],
+    avatarInitials: map['avatarInitials'] ?? '',
+    score: map['score'] ?? 0,
+    rank: map['rank'] ?? 0,
+    answeredCount: map['answeredCount'] ?? 0,
+    correctCount: map['correctCount'] ?? 0,
+    joinedAt: DateTime.parse(map['joinedAt']),
+  );
+}
+
+// ── Live Answer ───────────────────────────────────────────────────────────────
+
+class LiveAnswer {
+  final String id;
+  final String sessionId;
+  final String participantId;
+  final String questionId;
+  final int questionIndex;
+  final int selectedIndex;
+  final bool isCorrect;
+  final int pointsEarned;
+  final int responseMs; // milliseconds to answer
+  final DateTime answeredAt;
+
+  const LiveAnswer({
+    required this.id,
+    required this.sessionId,
+    required this.participantId,
+    required this.questionId,
+    required this.questionIndex,
+    required this.selectedIndex,
+    required this.isCorrect,
+    required this.pointsEarned,
+    required this.responseMs,
+    required this.answeredAt,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'sessionId': sessionId,
+    'participantId': participantId,
+    'questionId': questionId,
+    'questionIndex': questionIndex,
+    'selectedIndex': selectedIndex,
+    'isCorrect': isCorrect,
+    'pointsEarned': pointsEarned,
+    'responseMs': responseMs,
+    'answeredAt': answeredAt.toIso8601String(),
+  };
+
+  factory LiveAnswer.fromMap(Map<String, dynamic> map) => LiveAnswer(
+    id: map['id'],
+    sessionId: map['sessionId'],
+    participantId: map['participantId'],
+    questionId: map['questionId'],
+    questionIndex: map['questionIndex'] ?? 0,
+    selectedIndex: map['selectedIndex'],
+    isCorrect: map['isCorrect'] ?? false,
+    pointsEarned: map['pointsEarned'] ?? 0,
+    responseMs: map['responseMs'] ?? 0,
+    answeredAt: DateTime.parse(map['answeredAt']),
+  );
+}
+
+class QuizAttempt {  final String id;
   final String testId;
   final String testTitle;
   final String userId;

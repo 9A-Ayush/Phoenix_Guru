@@ -3,9 +3,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Users ──────────────────────────────────────────────────────────────
-    // Any authenticated user can READ any user document.
-    // (Teachers need to read student profiles in class detail screen.)
-    // Only the owner can WRITE their own document.
     match /users/{userId} {
       allow read:  if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
@@ -40,6 +37,55 @@ service cloud.firestore {
                     && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null
                              && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Live Sessions ───────────────────────────────────────────────────────
+    // Any authenticated user can read sessions (to join by PIN).
+    // Only the host (teacher) can create/update/delete the session doc.
+    match /live_sessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.hostId == request.auth.uid;
+      allow update: if request.auth != null
+                    && (
+                      // Host can update anything
+                      resource.data.hostId == request.auth.uid
+                      ||
+                      // Students can only increment participantCount
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['participantCount'])
+                    );
+      allow delete: if request.auth != null
+                    && resource.data.hostId == request.auth.uid;
+
+      // ── Participants subcollection ──────────────────────────────────────
+      match /participants/{userId} {
+        allow read: if request.auth != null;
+        // Students can create/update their own participant doc
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow update: if request.auth != null
+                      && (
+                        request.auth.uid == userId
+                        ||
+                        // Host can update (kick, score update)
+                        get(/databases/$(database)/documents/live_sessions/$(sessionId)).data.hostId
+                          == request.auth.uid
+                      );
+        // Only host can delete (kick)
+        allow delete: if request.auth != null
+                      && get(/databases/$(database)/documents/live_sessions/$(sessionId)).data.hostId
+                        == request.auth.uid;
+      }
+    }
+
+    // ── Live Answers ────────────────────────────────────────────────────────
+    // Students submit their own answers. Everyone can read (for leaderboard).
+    match /live_answers/{answerId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.participantId == request.auth.uid;
+      // No updates or deletes — answers are immutable
+      allow update, delete: if false;
     }
   }
 }

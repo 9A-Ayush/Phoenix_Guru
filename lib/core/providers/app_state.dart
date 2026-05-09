@@ -4,7 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:uuid/uuid.dart';
 import '../models.dart';
+
+const _uuid = Uuid();
 
 /// Tracks where we are in the auth lifecycle.
 /// [unknown]         → app just started, haven't checked yet
@@ -538,6 +541,101 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ── Live Sessions ─────────────────────────────────────────────────────────
+
+  /// Generates a random 6-digit PIN not already in use.
+  Future<String> _generateUniquePin() async {
+    final rand = DateTime.now().microsecondsSinceEpoch;
+    String pin;
+    int attempts = 0;
+    do {
+      final n = (rand + attempts * 7919) % 1000000;
+      pin = n.toString().padLeft(6, '0');
+      final existing = await _firestore
+          .collection('live_sessions')
+          .where('pin', isEqualTo: pin)
+          .where('status', whereNotIn: ['ended'])
+          .get();
+      if (existing.docs.isEmpty) break;
+      attempts++;
+    } while (attempts < 20);
+    return pin;
+  }
+
+  /// Creates a live session in Firestore and returns it.
+  Future<LiveSession?> startLiveSession(TestModel test) async {
+    try {
+      final pin = await _generateUniquePin();
+      final session = LiveSession(
+        id: _uuid.v4(),
+        testId: test.id,
+        testTitle: test.title,
+        hostId: _currentUser!.id,
+        hostName: _currentUser!.name,
+        pin: pin,
+        createdAt: DateTime.now(),
+      );
+      await _firestore
+          .collection('live_sessions')
+          .doc(session.id)
+          .set(session.toMap());
+      return session;
+    } catch (e) {
+      debugPrint('startLiveSession error: $e');
+      return null;
+    }
+  }
+
+  /// Advances to the next question or ends the session.
+  Future<void> updateLiveSession(String sessionId, {
+    int? currentQuestion,
+    LiveSessionStatus? status,
+  }) async {
+    final data = <String, dynamic>{};
+    if (currentQuestion != null) data['currentQuestion'] = currentQuestion;
+    if (status != null) data['status'] = status.name;
+    if (data.isEmpty) return;
+    await _firestore.collection('live_sessions').doc(sessionId).update(data);
+  }
+
+  /// Real-time stream of a live session document.
+  Stream<LiveSession?> liveSessionStream(String sessionId) {
+    return _firestore
+        .collection('live_sessions')
+        .doc(sessionId)
+        .snapshots()
+        .map((doc) => doc.exists && doc.data() != null
+            ? LiveSession.fromMap(doc.data()!)
+            : null);
+  }
+
+  /// Finds an active session by PIN (for students joining).
+  Future<LiveSession?> findSessionByPin(String pin) async {
+    try {
+      final snap = await _firestore
+          .collection('live_sessions')
+          .where('pin', isEqualTo: pin)
+          .where('status', whereNotIn: ['ended'])
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      return LiveSession.fromMap(snap.docs.first.data());
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Stream of all attempts for a live session's test (for real-time score board).
+  Stream<List<QuizAttempt>> liveAttemptsStream(String testId) {
+    return _firestore
+        .collection('attempts')
+        .where('testId', isEqualTo: testId)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => QuizAttempt.fromMap(d.data()))
+            .toList());
+  }
+
   // ── Tests ─────────────────────────────────────────────────────────────────
   Future<TestModel> createTest({
     required String title,
@@ -599,14 +697,31 @@ class AppState extends ChangeNotifier {
   }
 
   /// Toggles isLive (publish/unpublish) on a test.
-  Future<String?> toggleTestPublish(String testId, {required bool isLive}) async {
+  Future<String?> toggleTestPublish(String testId, {required bool isLive, String? pin}) async {
     try {
-      await _firestore.collection('tests').doc(testId).update({
-        'isLive': isLive,
-      });
+      final data = <String, dynamic>{'isLive': isLive};
+      if (isLive && pin != null) data['pin'] = pin;
+      if (!isLive) data['pin'] = null; // clear pin when unpublishing
+      await _firestore.collection('tests').doc(testId).update(data);
       return null;
     } catch (e) {
       return e.toString();
+    }
+  }
+
+  /// Finds a live test by its PIN.
+  Future<TestModel?> findTestByPin(String pin) async {
+    try {
+      final snap = await _firestore
+          .collection('tests')
+          .where('pin', isEqualTo: pin.toUpperCase())
+          .where('isLive', isEqualTo: true)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      return TestModel.fromMap(snap.docs.first.data());
+    } catch (_) {
+      return null;
     }
   }
 
