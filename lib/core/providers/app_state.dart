@@ -131,7 +131,9 @@ class AppState extends ChangeNotifier {
   Future<void> _onAuthChanged(User? user) async {
     if (user != null) {
       // User signed in elsewhere or token refreshed.
-      if (_currentUser == null) {
+      // Skip if we're in needsRolePicker — the Google sign-in flow is still
+      // in progress and will handle its own state transition.
+      if (_currentUser == null && _authStatus != AuthStatus.needsRolePicker) {
         _authStatus = AuthStatus.checking;
         notifyListeners();
         final loaded = await _loadUserProfile(user.uid);
@@ -145,14 +147,16 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } else {
-      // User signed out.
-      _currentUser = null;
-      _authStatus = AuthStatus.unauthenticated;
-      _cancelStreams();
-      _classes.clear();
-      _tests.clear();
-      _attempts.clear();
-      notifyListeners();
+      // User signed out — but only reset if we're not mid-Google-flow.
+      if (_authStatus != AuthStatus.needsRolePicker) {
+        _currentUser = null;
+        _authStatus = AuthStatus.unauthenticated;
+        _cancelStreams();
+        _classes.clear();
+        _tests.clear();
+        _attempts.clear();
+        notifyListeners();
+      }
     }
   }
 

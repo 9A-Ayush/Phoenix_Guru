@@ -7,6 +7,7 @@ import '../../../core/models.dart';
 import '../../../core/providers/app_state.dart';
 import '../../student/screens/student_shell.dart';
 import '../../teacher/screens/teacher_shell.dart';
+import 'login_screen.dart';
 
 // ── Role descriptor ───────────────────────────────────────────────────────────
 
@@ -121,7 +122,13 @@ class _RolePickerScreenState extends State<RolePickerScreen> {
                     onTap: () async {
                       final nav = Navigator.of(context);
                       await context.read<AppState>().logout();
-                      if (mounted) nav.pop();
+                      if (!mounted) return;
+                      // Always navigate to LoginScreen — pop() gives black screen
+                      // because RolePickerScreen was pushed with pushAndRemoveUntil.
+                      nav.pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (_) => false,
+                      );
                     },
                     child: Container(
                       width: 36, height: 36,
