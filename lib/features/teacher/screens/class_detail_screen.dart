@@ -308,9 +308,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
 // ── Students Tab ──────────────────────────────────────────────────────────────
 
-class _StudentsTab extends StatelessWidget {
+class _StudentsTab extends StatefulWidget {
   final ClassModel cls;
   const _StudentsTab({required this.cls});
+
+  @override
+  State<_StudentsTab> createState() => _StudentsTabState();
+}
+
+class _StudentsTabState extends State<_StudentsTab> {
+  Stream<List<UserModel>>? _stream;
+  List<String> _lastUids = [];
 
   static const _avatarColors = [
     AppColors.primary,
@@ -322,8 +330,48 @@ class _StudentsTab extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _rebuildStream(widget.cls.studentIds);
+  }
+
+  @override
+  void didUpdateWidget(_StudentsTab old) {
+    super.didUpdateWidget(old);
+    // Only recreate the stream if the student list actually changed
+    final newUids = widget.cls.studentIds;
+    if (!_listEquals(newUids, _lastUids)) {
+      _rebuildStream(newUids);
+    }
+  }
+
+  void _rebuildStream(List<String> uids) {
+    _lastUids = List<String>.from(uids);
+    if (uids.isEmpty) {
+      _stream = Stream.value([]);
+      return;
+    }
+    _stream = context
+        .read<AppState>()
+        .firestoreInstance
+        .collection('users')
+        .where('id', whereIn: uids.take(30).toList())
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((d) => UserModel.fromMap(d.data())).toList());
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (cls.studentIds.isEmpty) {
+    if (widget.cls.studentIds.isEmpty) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Symbols.groups, color: AppColors.textMuted, size: 52),
@@ -341,12 +389,13 @@ class _StudentsTab extends StatelessWidget {
       );
     }
 
-    // Stream all student profiles in real time using the studentIds list
     return StreamBuilder<List<UserModel>>(
-      stream: _studentsStream(context, cls.studentIds),
+      stream: _stream,
       builder: (context, snapshot) {
+        // Show previous data while loading — no flash
         final students = snapshot.data ?? [];
-        final loading = !snapshot.hasData;
+        final loading = snapshot.connectionState == ConnectionState.waiting
+            && students.isEmpty;
 
         if (loading) {
           return const Center(
@@ -355,12 +404,11 @@ class _StudentsTab extends StatelessWidget {
 
         return ListView.separated(
           padding: const EdgeInsets.all(24),
-          itemCount: students.length + 1, // +1 for the share code card
+          itemCount: students.length + 1,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) {
-            // Last item — share code card
             if (i == students.length) {
-              return _ShareCodeCard(classCode: cls.classCode);
+              return _ShareCodeCard(classCode: widget.cls.classCode);
             }
 
             final s = students[i];
@@ -415,7 +463,8 @@ class _StudentsTab extends StatelessWidget {
               onDismissed: (_) async {
                 final err = await context
                     .read<AppState>()
-                    .removeStudent(classId: cls.id, studentId: s.id);
+                    .removeStudent(
+                        classId: widget.cls.id, studentId: s.id);
                 if (err != null && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(err,
@@ -485,53 +534,6 @@ class _StudentsTab extends StatelessWidget {
         );
       },
     );
-  }
-
-  /// Streams user profiles for the given UIDs.
-  /// Re-emits whenever any of the user docs change.
-  Stream<List<UserModel>> _studentsStream(
-      BuildContext context, List<String> uids) {
-    if (uids.isEmpty) return Stream.value([]);
-
-    // Firestore 'in' query supports up to 30 items per query.
-    // For simplicity we batch into chunks of 30.
-    final chunks = <List<String>>[];
-    for (var i = 0; i < uids.length; i += 30) {
-      chunks.add(uids.sublist(
-          i, i + 30 > uids.length ? uids.length : i + 30));
-    }
-
-    if (chunks.length == 1) {
-      return context
-          .read<AppState>()
-          .firestoreInstance
-          .collection('users')
-          .where('id', whereIn: chunks[0])
-          .snapshots()
-          .map((snap) => snap.docs
-              .map((d) => UserModel.fromMap(d.data()))
-              .toList());
-    }
-
-    // Multiple chunks — combine streams
-    final streams = chunks.map((chunk) => context
-        .read<AppState>()
-        .firestoreInstance
-        .collection('users')
-        .where('id', whereIn: chunk)
-        .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => UserModel.fromMap(d.data())).toList()));
-
-    // Merge by combining latest values from all streams
-    return _mergeStreams(streams.toList());
-  }
-
-  Stream<List<UserModel>> _mergeStreams(
-      List<Stream<List<UserModel>>> streams) {
-    // For classes with >30 students, combine all chunk streams.
-    // Simple approach: use the first chunk (covers 99% of real-world cases).
-    return streams.first;
   }
 }
 
