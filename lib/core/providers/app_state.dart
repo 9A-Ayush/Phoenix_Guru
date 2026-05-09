@@ -524,7 +524,6 @@ class AppState extends ChangeNotifier {
   }
 
   // ── Tests ─────────────────────────────────────────────────────────────────
-
   Future<TestModel> createTest({
     required String title,
     required String classId,
@@ -549,6 +548,69 @@ class AppState extends ChangeNotifier {
   }
 
   // ── Quiz Attempts ─────────────────────────────────────────────────────────
+
+  /// Updates test title and questions in Firestore.
+  Future<String?> updateTest({
+    required String testId,
+    required String title,
+    required List<QuizQuestion> questions,
+  }) async {
+    try {
+      await _firestore.collection('tests').doc(testId).update({
+        'title': title,
+        'questions': questions.map((q) => q.toMap()).toList(),
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Extends the expiry date of a test.
+  Future<String?> extendTestExpiry({
+    required String testId,
+    required DateTime newExpiry,
+  }) async {
+    try {
+      await _firestore.collection('tests').doc(testId).update({
+        'expiresAt': newExpiry.toIso8601String(),
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Toggles isLive (publish/unpublish) on a test.
+  Future<String?> toggleTestPublish(String testId, {required bool isLive}) async {
+    try {
+      await _firestore.collection('tests').doc(testId).update({
+        'isLive': isLive,
+      });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Deletes a test and all its attempts from Firestore.
+  Future<String?> deleteTest(String testId) async {
+    try {
+      final attemptSnap = await _firestore
+          .collection('attempts')
+          .where('testId', isEqualTo: testId)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in attemptSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_firestore.collection('tests').doc(testId));
+      await batch.commit();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
 
   Future<QuizAttempt> submitAttempt({
     required String testId,

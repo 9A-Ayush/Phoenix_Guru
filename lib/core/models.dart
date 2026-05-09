@@ -158,6 +158,7 @@ class TestModel {
   final int durationMinutes;
   final List<QuizQuestion> questions;
   final DateTime? scheduledAt;
+  final DateTime? expiresAt;
   final bool isLive;
 
   TestModel({
@@ -168,10 +169,14 @@ class TestModel {
     required this.durationMinutes,
     required this.questions,
     this.scheduledAt,
+    this.expiresAt,
     this.isLive = false,
   }) : id = id ?? _uuid.v4();
 
   int get questionCount => questions.length;
+
+  bool get isExpired =>
+      expiresAt != null && DateTime.now().isAfter(expiresAt!);
 
   Map<String, dynamic> toMap() {
     return {
@@ -182,6 +187,7 @@ class TestModel {
       'durationMinutes': durationMinutes,
       'questions': questions.map((q) => q.toMap()).toList(),
       'scheduledAt': scheduledAt?.toIso8601String(),
+      'expiresAt': expiresAt?.toIso8601String(),
       'isLive': isLive,
     };
   }
@@ -195,6 +201,7 @@ class TestModel {
       durationMinutes: map['durationMinutes'],
       questions: (map['questions'] as List).map((q) => QuizQuestion.fromMap(q)).toList(),
       scheduledAt: map['scheduledAt'] != null ? DateTime.parse(map['scheduledAt']) : null,
+      expiresAt: map['expiresAt'] != null ? DateTime.parse(map['expiresAt']) : null,
       isLive: map['isLive'] ?? false,
     );
   }

@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
+import '../../../core/models.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/screens/login_screen.dart';
 import 'create_class_screen.dart';
@@ -16,6 +17,7 @@ import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'notifications_screen.dart';
 import 'help_support_screen.dart';
+import 'edit_test_screen.dart';
 
 // ── Shell ────────────────────────────────────────────────────────────────────
 
@@ -292,6 +294,12 @@ class TeacherClassesPage extends StatelessWidget {
 class TeacherTestsPage extends StatelessWidget {
   const TeacherTestsPage({super.key});
 
+  String _formatDate(DateTime d) {
+    const m = ['Jan','Feb','Mar','Apr','May','Jun',
+                'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${d.day} ${m[d.month - 1]} ${d.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final tests = context.watch<AppState>().allTests;
@@ -301,16 +309,28 @@ class TeacherTestsPage extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Tests', style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+            Text('Tests',
+                style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700)),
             GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTestScreen())),
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CreateTestScreen())),
               child: Container(
-                height: 38, padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(12)),
                 child: Row(children: [
                   const Icon(Symbols.add, color: Colors.white, size: 18),
                   const SizedBox(width: 6),
-                  Text('New Test', style: GoogleFonts.poppins(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text('New Test',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
                 ]),
               ),
             ),
@@ -319,44 +339,506 @@ class TeacherTestsPage extends StatelessWidget {
         const SizedBox(height: 12),
         Expanded(
           child: tests.isEmpty
-              ? const Center(child: Text('No tests created', style: TextStyle(color: AppColors.textSecondary)))
+              ? Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Symbols.assignment,
+                        color: AppColors.textMuted, size: 52),
+                    const SizedBox(height: 12),
+                    Text('No tests yet',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.textSecondary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text('Create your first test',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.textMuted, fontSize: 13)),
+                  ]),
+                )
               : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 4),
                   itemCount: tests.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (_, i) {
                     final t = tests[i];
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.border)),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                          Expanded(child: Text(t.title, style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600))),
-                          Container(
-                            height: 24, padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(color: AppColors.warningLight, borderRadius: BorderRadius.circular(8)),
-                            child: Text('Upcoming', style: GoogleFonts.poppins(color: AppColors.warning, fontSize: 10, fontWeight: FontWeight.w600)),
-                          ),
-                        ]),
-                        const SizedBox(height: 8),
-                        Text(t.className, style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 12)),
-                        const SizedBox(height: 6),
-                        Row(children: [
-                          const Icon(Symbols.schedule, color: AppColors.textMuted, size: 14),
-                          const SizedBox(width: 4),
-                          Text('${t.durationMinutes} mins', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 12)),
-                          const SizedBox(width: 12),
-                          const Icon(Symbols.help, color: AppColors.textMuted, size: 14),
-                          const SizedBox(width: 4),
-                          Text('${t.questionCount} Questions', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 12)),
-                        ]),
-                      ]),
+                    return _TestCard(
+                      test: t,
+                      formatDate: _formatDate,
                     ).animate().fadeIn(delay: (i * 60).ms);
                   },
                 ),
         ),
       ]),
+    );
+  }
+}
+
+// ── Test card ─────────────────────────────────────────────────────────────────
+
+class _TestCard extends StatelessWidget {
+  final TestModel test;
+  final String Function(DateTime) formatDate;
+
+  const _TestCard({required this.test, required this.formatDate});
+
+  Color get _statusColor {
+    if (test.isLive) return AppColors.success;
+    if (test.isExpired) return AppColors.error;
+    return AppColors.warning;
+  }
+
+  String get _statusLabel {
+    if (test.isLive) return 'Live';
+    if (test.isExpired) return 'Expired';
+    return 'Upcoming';
+  }
+
+  IconData get _statusIcon {
+    if (test.isLive) return Symbols.live_tv;
+    if (test.isExpired) return Symbols.timer_off;
+    return Symbols.schedule;
+  }
+
+  void _showMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TestMenuSheet(test: test, formatDate: formatDate),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final attempts =
+        context.read<AppState>().attemptsForTest(test.id);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(children: [
+        // ── Top row ──────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Subject icon box
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: _statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_statusIcon, color: _statusColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              // Title + class
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(test.title,
+                      style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Text(test.className,
+                      style: GoogleFonts.poppins(
+                          color: AppColors.textSecondary, fontSize: 12)),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              // Three-dot + status badge column
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: () => _showMenu(context),
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.more_vert_rounded,
+                          color: AppColors.textMuted, size: 18),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(_statusLabel,
+                        style: GoogleFonts.poppins(
+                            color: _statusColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // ── Divider ───────────────────────────────────────────────────────
+        const SizedBox(height: 12),
+        const Divider(color: AppColors.border, height: 1),
+
+        // ── Stats row ─────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            _Stat(icon: Symbols.timer, label: '${test.durationMinutes} mins'),
+            const SizedBox(width: 16),
+            _Stat(icon: Symbols.help, label: '${test.questionCount} Qs'),
+            const SizedBox(width: 16),
+            _Stat(icon: Symbols.person, label: '${ attempts.length} done'),
+            if (test.expiresAt != null) ...[
+              const Spacer(),
+              Row(children: [
+                const Icon(Symbols.calendar_month,
+                    color: AppColors.textMuted, size: 13),
+                const SizedBox(width: 4),
+                Text(formatDate(test.expiresAt!),
+                    style: GoogleFonts.poppins(
+                        color: test.isExpired
+                            ? AppColors.error
+                            : AppColors.textMuted,
+                        fontSize: 11)),
+              ]),
+            ],
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _Stat({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, color: AppColors.textMuted, size: 13),
+      const SizedBox(width: 4),
+      Text(label,
+          style: GoogleFonts.poppins(
+              color: AppColors.textMuted, fontSize: 12)),
+    ]);
+  }
+}
+
+// ── Test menu bottom sheet ────────────────────────────────────────────────────
+
+class _TestMenuSheet extends StatelessWidget {
+  final TestModel test;
+  final String Function(DateTime) formatDate;
+
+  const _TestMenuSheet({required this.test, required this.formatDate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        // Handle
+        Container(
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2)),
+        ),
+        const SizedBox(height: 16),
+
+        // Test info
+        Row(children: [
+          Container(
+            width: 42, height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Symbols.assignment,
+                color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Text(test.title,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              Text(test.className,
+                  style: GoogleFonts.poppins(
+                      color: AppColors.textSecondary, fontSize: 12)),
+            ]),
+          ),
+        ]),
+
+        const SizedBox(height: 16),
+        const Divider(color: AppColors.border, height: 1),
+        const SizedBox(height: 12),
+
+        // Edit (name + questions + expiry)
+        _MenuItem(
+          icon: Symbols.edit,
+          iconColor: AppColors.primary,
+          label: 'Edit Test',
+          subtitle: 'Change name, questions or expiry date',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => EditTestScreen(test: test)),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+
+        // Publish / Unpublish
+        _MenuItem(
+          icon: test.isLive ? Symbols.pause : Symbols.publish,
+          iconColor: test.isLive ? AppColors.warning : AppColors.success,
+          label: test.isLive ? 'Unpublish Test' : 'Publish Test',
+          subtitle: test.isLive
+              ? 'Stop students from taking this test'
+              : 'Make this test available to students',
+          onTap: () async {
+            Navigator.pop(context);
+            final err = await context
+                .read<AppState>()
+                .toggleTestPublish(test.id, isLive: !test.isLive);
+            if (err != null && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(err,
+                    style: GoogleFonts.poppins(color: Colors.white)),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ));
+            }
+          },
+        ),
+        const SizedBox(height: 8),
+
+        // Extend expiry
+        _MenuItem(
+          icon: Symbols.calendar_month,
+          iconColor: const Color(0xFF5B2FD4),
+          label: 'Extend Expiry',
+          subtitle: test.expiresAt != null
+              ? 'Current: ${formatDate(test.expiresAt!)}'
+              : 'Set a new expiration date',
+          onTap: () async {
+            Navigator.pop(context);
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: test.expiresAt != null &&
+                      test.expiresAt!.isAfter(today)
+                  ? test.expiresAt!
+                  : today.add(const Duration(days: 1)),
+              firstDate: today.add(const Duration(days: 1)),
+              lastDate: DateTime(now.year + 2),
+              builder: (ctx, child) => Theme(
+                data: ThemeData.dark().copyWith(
+                  colorScheme: const ColorScheme.dark(
+                    primary: Color(0xFF5B2FD4),
+                    onPrimary: Colors.white,
+                    surface: Color(0xFF0A0A0A),
+                    onSurface: Colors.white,
+                  ),
+                  dialogTheme: const DialogThemeData(
+                    backgroundColor: Color(0xFF0A0A0A),
+                  ),
+                  textButtonTheme: TextButtonThemeData(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF5B2FD4),
+                    ),
+                  ),
+                ),
+                child: child!,
+              ),
+            );
+            if (picked != null && context.mounted) {
+              final err = await context
+                  .read<AppState>()
+                  .extendTestExpiry(testId: test.id, newExpiry: picked);
+              if (err != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(err,
+                      style: GoogleFonts.poppins(color: Colors.white)),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ));
+              }
+            }
+          },
+        ),
+        const SizedBox(height: 8),
+
+        // Delete
+        _MenuItem(
+          icon: Symbols.delete,
+          iconColor: AppColors.error,
+          label: 'Delete Test',
+          subtitle: 'Permanently remove this test and all attempts',
+          destructive: true,
+          onTap: () {
+            Navigator.pop(context);
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                backgroundColor: AppColors.surface2,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                title: Text('Delete Test',
+                    style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700)),
+                content: Text(
+                  'Delete "${test.title}"?\n\nAll student attempts will also be deleted. This cannot be undone.',
+                  style: GoogleFonts.poppins(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      height: 1.5),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Cancel',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.textSecondary)),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final nav = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
+                      nav.pop();
+                      final err = await context
+                          .read<AppState>()
+                          .deleteTest(test.id);
+                      if (err != null) {
+                        messenger.showSnackBar(SnackBar(
+                          content: Text(err,
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white)),
+                          backgroundColor: AppColors.error,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ));
+                      }
+                    },
+                    child: Text('Delete',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ]),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  const _MenuItem({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: destructive ? AppColors.errorLight : AppColors.surface2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: destructive
+                ? AppColors.error.withValues(alpha: 0.2)
+                : AppColors.border,
+          ),
+        ),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Text(label,
+                  style: GoogleFonts.poppins(
+                      color: destructive ? AppColors.error : Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600)),
+              Text(subtitle,
+                  style: GoogleFonts.poppins(
+                      color: destructive
+                          ? AppColors.error.withValues(alpha: 0.7)
+                          : AppColors.textSecondary,
+                      fontSize: 12)),
+            ]),
+          ),
+          Icon(Symbols.chevron_right,
+              color: destructive
+                  ? AppColors.error.withValues(alpha: 0.5)
+                  : AppColors.textMuted,
+              size: 18),
+        ]),
+      ),
     );
   }
 }
