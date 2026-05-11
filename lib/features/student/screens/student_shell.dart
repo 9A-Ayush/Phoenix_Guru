@@ -10,6 +10,10 @@ import '../../../shared/widgets/widgets.dart';
 import '../../auth/screens/login_screen.dart';
 import '../quiz/quiz_screens.dart';
 import '../quiz/join_live_quiz_screen.dart';
+import '../../teacher/screens/edit_profile_screen.dart';
+import '../../teacher/screens/change_password_screen.dart';
+import '../../teacher/screens/notifications_screen.dart';
+import '../../teacher/screens/help_support_screen.dart';
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 class StudentShell extends StatefulWidget {
@@ -312,10 +316,14 @@ class StudentProfilePage extends StatelessWidget {
       Padding(padding:const EdgeInsets.symmetric(horizontal:24),child:Column(children:[
         Container(height:72,decoration:BoxDecoration(color:AppColors.surface,borderRadius:BorderRadius.circular(16)),child:Row(children:[_si('3','Classes',AppColors.primary),Container(width:1,height:40,color:AppColors.border),_si('${attempts.length}','Tests Done',AppColors.warning),Container(width:1,height:40,color:AppColors.border),_si('84%','Avg Score',AppColors.success)])),
         const SizedBox(height:16),
-        MenuRow(icon:Symbols.person,iconColor:AppColors.primary,label:'Edit Profile'),const SizedBox(height:10),
-        MenuRow(icon:Symbols.notifications,iconColor:AppColors.warning,label:'Notifications'),const SizedBox(height:10),
-        MenuRow(icon:Symbols.lock,iconColor:AppColors.success,label:'Change Password'),const SizedBox(height:10),
-        MenuRow(icon:Symbols.help,iconColor:AppColors.textSecondary,label:'Help & Support'),
+        MenuRow(icon:Symbols.person,iconColor:AppColors.primary,label:'Edit Profile',
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditProfileScreen()))),const SizedBox(height:10),
+        MenuRow(icon:Symbols.notifications,iconColor:AppColors.warning,label:'Notifications',
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationsScreen()))),const SizedBox(height:10),
+        MenuRow(icon:Symbols.lock,iconColor:AppColors.success,label:'Change Password',
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ChangePasswordScreen()))),const SizedBox(height:10),
+        MenuRow(icon:Symbols.help,iconColor:AppColors.textSecondary,label:'Help & Support',
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HelpSupportScreen()))),
         const SizedBox(height:20),
         SectionHeader(title:'My Quiz Results',action:'View All',onAction:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const QuizResultsListScreen()))),
         const SizedBox(height:12),

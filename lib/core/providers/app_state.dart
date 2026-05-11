@@ -430,14 +430,23 @@ class AppState extends ChangeNotifier {
   }) async {
     final firebaseUser = _auth.currentUser;
     if (firebaseUser == null || firebaseUser.email == null) return 'Not logged in';
+    // Rate limit: 2 attempts per hour
+    final rl = RateLimiter.instance;
+    final blocked = rl.check(
+      'changepass:${firebaseUser.uid}',
+      maxAttempts: 2,
+      window: const Duration(hours: 1),
+      blockDuration: const Duration(hours: 1),
+    );
+    if (blocked != null) return blocked;
     try {
-      // Re-authenticate first
       final cred = EmailAuthProvider.credential(
         email: firebaseUser.email!,
         password: currentPassword,
       );
       await firebaseUser.reauthenticateWithCredential(cred);
       await firebaseUser.updatePassword(newPassword);
+      rl.reset('changepass:${firebaseUser.uid}');
       return null;
     } catch (e) {
       return _friendlyAuthError(e);
