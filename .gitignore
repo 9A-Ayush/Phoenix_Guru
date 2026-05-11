@@ -65,3 +65,7 @@ gemini_config.json
 # Future feature planning docs (not ready for implementation)
 FUTURE_AI_IMPORT.md
 FUTURE_CLOUDINARY_MEDIA_UPLOAD.md
+
+# Firebase config files — contain API keys, keep local only
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
