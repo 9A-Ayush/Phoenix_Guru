@@ -198,18 +198,34 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.errorLight,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.4)),
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Container(
-                        width: 8, height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
+                      // Blinking red dot
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 800),
+                        builder: (_, v, child) => Opacity(
+                          opacity: v < 0.5 ? v * 2 : (1 - v) * 2,
+                          child: child,
                         ),
-                      ).animate(onPlay: (c) => c.repeat())
-                          .fadeOut(duration: 800.ms)
-                          .then()
-                          .fadeIn(duration: 800.ms),
+                        onEnd: () => setState(() {}), // retrigger
+                        child: Container(
+                          width: 8, height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.error,
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 6),
                       Text('LOBBY',
                           style: GoogleFonts.poppins(
