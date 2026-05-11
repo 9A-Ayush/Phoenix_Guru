@@ -20,7 +20,8 @@ class LiveSessionLobbyScreen extends StatefulWidget {
   State<LiveSessionLobbyScreen> createState() => _LiveSessionLobbyScreenState();
 }
 
-class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
+class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen>
+    with SingleTickerProviderStateMixin {
   final QuizService _svc = QuizService();
 
   LiveSession? _session;
@@ -29,16 +30,23 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
   StreamSubscription? _participantsSub;
   bool _starting = false;
   bool _creating = true;
-  bool _showQr = false; // toggle between PIN and QR view
+  bool _showQr = false;
+
+  late final AnimationController _blinkCtrl;
 
   @override
   void initState() {
     super.initState();
+    _blinkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
     _createSession();
   }
 
   @override
   void dispose() {
+    _blinkCtrl.dispose();
     _sessionSub?.cancel();
     _participantsSub?.cancel();
     super.dispose();
@@ -203,26 +211,24 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       // Blinking red dot
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 800),
-                        builder: (_, v, child) => Opacity(
-                          opacity: v < 0.5 ? v * 2 : (1 - v) * 2,
-                          child: child,
-                        ),
-                        onEnd: () => setState(() {}), // retrigger
-                        child: Container(
-                          width: 8, height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.error,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.error,
-                                blurRadius: 6,
-                                spreadRadius: 1,
-                              ),
-                            ],
+                      AnimatedBuilder(
+                        animation: _blinkCtrl,
+                        builder: (_, __) => Opacity(
+                          opacity: _blinkCtrl.value,
+                          child: Container(
+                            width: 8, height: 8,
+                            decoration: BoxDecoration(
+                              color: AppColors.error,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.error
+                                      .withValues(alpha: _blinkCtrl.value),
+                                  blurRadius: 6,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
