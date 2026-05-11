@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models.dart';
 import '../../../core/providers/app_state.dart';
@@ -28,6 +29,7 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
   StreamSubscription? _participantsSub;
   bool _starting = false;
   bool _creating = true;
+  bool _showQr = false; // toggle between PIN and QR view
 
   @override
   void initState() {
@@ -259,58 +261,31 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
 
               const SizedBox(height: 16),
 
-              // PIN display
-              GestureDetector(
-                onTap: _copyPin,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.4)),
-                  ),
-                  child: Column(children: [
-                    Text('JOIN PIN',
-                        style: GoogleFonts.poppins(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.5)),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: session.pin.split('').map((d) => Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 36, height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(d,
-                            style: GoogleFonts.poppins(
-                                color: AppColors.primary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800)),
-                      )).toList(),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Symbols.content_copy,
-                          color: AppColors.textMuted, size: 13),
-                      const SizedBox(width: 4),
-                      Text('Tap to copy',
-                          style: GoogleFonts.poppins(
-                              color: AppColors.textMuted, fontSize: 11)),
-                    ]),
-                  ]),
+              // PIN / QR toggle tabs
+              Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
                 ),
-              ).animate().scale(
-                  begin: const Offset(0.9, 0.9),
-                  duration: 400.ms,
-                  curve: Curves.easeOut),
+                child: Row(children: [
+                  _TabBtn(label: 'PIN', icon: Symbols.pin, active: !_showQr,
+                      onTap: () => setState(() => _showQr = false)),
+                  _TabBtn(label: 'QR Code', icon: Symbols.qr_code, active: _showQr,
+                      onTap: () => setState(() => _showQr = true)),
+                ]),
+              ),
+
+              const SizedBox(height: 12),
+
+              // PIN display
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _showQr
+                    ? _QrCard(pin: session.pin, key: const ValueKey('qr'))
+                    : _PinCard(pin: session.pin, onCopy: _copyPin, key: const ValueKey('pin')),
+              ),
             ]),
           ),
 
@@ -465,6 +440,177 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen> {
           ),
         ]),
       ),
+    );
+  }
+}
+
+// ── Tab button ────────────────────────────────────────────────────────────────
+
+class _TabBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _TabBtn({
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon,
+                color: active ? Colors.white : AppColors.textMuted, size: 14),
+            const SizedBox(width: 5),
+            Text(label,
+                style: GoogleFonts.poppins(
+                    color: active ? Colors.white : AppColors.textMuted,
+                    fontSize: 12,
+                    fontWeight:
+                        active ? FontWeight.w600 : FontWeight.w500)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── PIN card ──────────────────────────────────────────────────────────────────
+
+class _PinCard extends StatelessWidget {
+  final String pin;
+  final VoidCallback onCopy;
+
+  const _PinCard({required this.pin, required this.onCopy, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onCopy,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Column(children: [
+          Text('JOIN PIN',
+              style: GoogleFonts.poppins(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: pin.split('').map((d) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 38, height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text(d,
+                  style: GoogleFonts.poppins(
+                      color: AppColors.primary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800)),
+            )).toList(),
+          ),
+          const SizedBox(height: 10),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Symbols.content_copy,
+                color: AppColors.textMuted, size: 13),
+            const SizedBox(width: 4),
+            Text('Tap to copy',
+                style: GoogleFonts.poppins(
+                    color: AppColors.textMuted, fontSize: 11)),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── QR card ───────────────────────────────────────────────────────────────────
+
+class _QrCard extends StatelessWidget {
+  final String pin;
+
+  const _QrCard({required this.pin, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // QR data: deep link that auto-fills the PIN
+    final qrData = 'phoenixguru://join?pin=$pin';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+      ),
+      child: Column(children: [
+        Text('SCAN TO JOIN',
+            style: GoogleFonts.poppins(
+                color: AppColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.5)),
+        const SizedBox(height: 14),
+        // White background for QR readability
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: QrImageView(
+            data: qrData,
+            version: QrVersions.auto,
+            size: 160,
+            backgroundColor: Colors.white,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: Color(0xFF0A0A1A),
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.square,
+              color: Color(0xFF0A0A1A),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text('PIN: $pin',
+            style: GoogleFonts.poppins(
+                color: AppColors.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2)),
+        const SizedBox(height: 4),
+        Text('Or enter PIN manually',
+            style: GoogleFonts.poppins(
+                color: AppColors.textMuted, fontSize: 11)),
+      ]),
     );
   }
 }

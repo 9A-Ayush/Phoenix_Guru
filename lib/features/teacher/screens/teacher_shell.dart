@@ -12,6 +12,8 @@ import 'create_class_screen.dart';
 import 'create_test_screen.dart';
 import 'class_detail_screen.dart';
 import 'live_quiz_host_screen.dart';
+import 'live_session_lobby_screen.dart';
+import 'create_quiz_screen.dart';
 import 'test_results_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
@@ -948,26 +950,12 @@ class TeacherQuizPage extends StatelessWidget {
   }
 
   Future<void> _launchSession(BuildContext context, TestModel test) async {
-    // Show loading indicator
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
-    final appState = context.read<AppState>();
 
-    // Create live session in Firestore
-    final session = await appState.startLiveSession(test);
-    if (session == null) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Failed to create session. Check your connection.',
-            style: GoogleFonts.poppins(color: Colors.white)),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
-      return;
-    }
-
+    // Navigate to lobby — lobby creates the session internally
     nav.push(MaterialPageRoute(
-      builder: (_) => TeacherLiveQuizScreen(test: test, session: session),
+      builder: (_) => LiveSessionLobbyScreen(test: test),
     ));
   }
 
@@ -987,34 +975,81 @@ class TeacherQuizPage extends StatelessWidget {
                   fontSize: 22,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 20),
+
+          // ── Create new quiz from scratch ──────────────────────────────
           GestureDetector(
-            onTap: () => _pickTest(context, tests),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const CreateQuizScreen())),
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.accent],
+                    colors: [AppColors.primary, Color(0xFF4B2FD4)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(children: [
                 Container(
-                  width: 60, height: 60,
+                  width: 56, height: 56,
                   decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(18)),
-                  child: const Icon(Symbols.live_tv, color: Colors.white, size: 32),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Symbols.add_circle,
+                      color: Colors.white, size: 30),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text('Start Live Quiz',
+                    Text('Create New Quiz',
                         style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text('Build questions & launch instantly',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white70, fontSize: 12)),
+                  ]),
+                ),
+                const Icon(Symbols.arrow_forward,
+                    color: Colors.white, size: 20),
+              ]),
+            ),
+          ).animate().fadeIn(delay: 100.ms),
+
+          const SizedBox(height: 12),
+
+          // ── Start from existing test ──────────────────────────────────
+          GestureDetector(
+            onTap: () => _pickTest(context, tests),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Symbols.live_tv,
+                      color: AppColors.primary, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text('Start from Test',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 17,
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     Text(
@@ -1022,14 +1057,15 @@ class TeacherQuizPage extends StatelessWidget {
                           ? 'No tests yet — create one first'
                           : '${tests.length} test${tests.length == 1 ? '' : 's'} available',
                       style: GoogleFonts.poppins(
-                          color: Colors.white70, fontSize: 13),
+                          color: AppColors.textSecondary, fontSize: 12),
                     ),
                   ]),
                 ),
-                const Icon(Symbols.arrow_forward, color: Colors.white, size: 22),
+                const Icon(Symbols.arrow_forward,
+                    color: AppColors.textMuted, size: 20),
               ]),
             ),
-          ),
+          ).animate().fadeIn(delay: 160.ms),
           const SizedBox(height: 16),
           // View Test Results card
           GestureDetector(
