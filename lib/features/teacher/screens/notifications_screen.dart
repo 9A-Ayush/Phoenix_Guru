@@ -23,6 +23,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _appUpdates = false;
   bool _loading = true;
   bool _saving = false;
+  DateTime? _lastSave;
 
   @override
   void initState() {
@@ -53,6 +54,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _save() async {
+    final now = DateTime.now();
+    if (_lastSave != null && now.difference(_lastSave!) < const Duration(seconds: 3)) {
+      return; // debounce
+    }
+    _lastSave = now;
     final uid = context.read<AppState>().currentUser?.id;
     if (uid == null) return;
     setState(() => _saving = true);

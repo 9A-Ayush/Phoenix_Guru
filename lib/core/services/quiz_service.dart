@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models.dart';
+import 'rate_limiter.dart';
 
 /// Isolated service for all live quiz Firestore operations.
 /// Screens call this directly via Provider or passed reference.
@@ -30,6 +31,18 @@ class QuizService {
     required String hostId,
     required String hostName,
   }) async {
+    // Check if host already has an active session
+    final existing = await _sessions
+        .where('hostId', isEqualTo: hostId)
+        .where('status', whereIn: [
+          LiveSessionStatus.waiting.name,
+          LiveSessionStatus.active.name,
+        ])
+        .limit(1)
+        .get();
+    if (existing.docs.isNotEmpty) {
+      throw Exception('You already have an active session. End it before starting a new one.');
+    }
     final pin = generatePin();
     final session = LiveSession(
       id: _db.collection('live_sessions').doc().id,
@@ -76,6 +89,15 @@ class QuizService {
   // ── Student: find session by PIN ──────────────────────────────────────────
 
   Future<LiveSession?> findSessionByPin(String pin) async {
+    final rl = RateLimiter.instance;
+    // Use a generic key since we may not have userId here
+    final blocked = rl.check(
+      'pin_lookup:$pin',
+      maxAttempts: 3,
+      window: const Duration(minutes: 1),
+      blockDuration: const Duration(minutes: 10),
+    );
+    if (blocked != null) throw Exception(blocked);
     final snap = await _sessions
         .where('pin', isEqualTo: pin)
         .where('status', whereIn: [
@@ -97,6 +119,14 @@ class QuizService {
     required String name,
     required String avatarInitials,
   }) async {
+    final rl = RateLimiter.instance;
+    final blocked = rl.check(
+      'join_session:$userId',
+      maxAttempts: 5,
+      window: const Duration(minutes: 5),
+      blockDuration: const Duration(minutes: 10),
+    );
+    if (blocked != null) return blocked;
     try {
       final sessionSnap = await _sessionDoc(sessionId).get();
       if (!sessionSnap.exists) return 'Session not found';
@@ -137,6 +167,16 @@ class QuizService {
     required int timerSeconds, // total time allowed
   }) async {
     try {
+      // Count total answers by this participant in this session
+      final totalAnswers = await _answers
+          .where('sessionId', isEqualTo: sessionId)
+          .where('participantId', isEqualTo: participantId)
+          .count()
+          .get();
+      if (totalAnswers.count != null && totalAnswers.count! >= 15) {
+        return 'Answer limit reached for this session.';
+      }
+
       // Prevent duplicate answers for same question
       final existing = await _answers
           .where('sessionId', isEqualTo: sessionId)

@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:uuid/uuid.dart';
 import '../models.dart';
+import '../services/rate_limiter.dart';
 
 const _uuid = Uuid();
 
@@ -203,6 +204,17 @@ class AppState extends ChangeNotifier {
 
   Future<String?> login(String email, String password, UserRole role) async {
     _isLoading = true; notifyListeners();
+    final rl = RateLimiter.instance;
+    final blocked = rl.check(
+      'login:$email',
+      maxAttempts: 3,
+      window: const Duration(minutes: 10),
+      blockDuration: const Duration(minutes: 30),
+    );
+    if (blocked != null) {
+      _isLoading = false; notifyListeners();
+      return blocked;
+    }
     try {
       final credential = await _auth.signInWithEmailAndPassword(email: email, password: password);
       final loaded = await _loadUserProfile(credential.user!.uid);
@@ -217,6 +229,7 @@ class AppState extends ChangeNotifier {
         _isLoading = false; notifyListeners();
         return 'Incorrect role selected';
       }
+      rl.reset('login:$email');
       _authStatus = AuthStatus.authenticated;
       _initStreams();
       _isLoading = false; notifyListeners();
@@ -229,6 +242,17 @@ class AppState extends ChangeNotifier {
 
   Future<String?> signUp(String name, String email, String password, UserRole role) async {
     _isLoading = true; notifyListeners();
+    final rl = RateLimiter.instance;
+    final blocked = rl.check(
+      'signup:$email',
+      maxAttempts: 2,
+      window: const Duration(hours: 1),
+      blockDuration: const Duration(hours: 1),
+    );
+    if (blocked != null) {
+      _isLoading = false; notifyListeners();
+      return blocked;
+    }
     try {
       final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       _currentUser = UserModel(id: credential.user!.uid, name: name, email: email, role: role);
@@ -244,6 +268,14 @@ class AppState extends ChangeNotifier {
   }
 
   Future<String?> forgotPassword(String email) async {
+    final rl = RateLimiter.instance;
+    final blocked = rl.check(
+      'forgot:$email',
+      maxAttempts: 2,
+      window: const Duration(hours: 1),
+      blockDuration: const Duration(hours: 1),
+    );
+    if (blocked != null) return blocked;
     try {
       await _auth.sendPasswordResetEmail(email: email);
       return null;
@@ -369,6 +401,14 @@ class AppState extends ChangeNotifier {
   /// Updates the user's display name in Firestore and local state.
   Future<String?> updateProfile({required String name}) async {
     if (_currentUser == null || _auth.currentUser == null) return 'Not logged in';
+    final rl = RateLimiter.instance;
+    final blocked = rl.check(
+      'profile:${_currentUser?.id}',
+      maxAttempts: 2,
+      window: const Duration(hours: 1),
+      blockDuration: const Duration(hours: 1),
+    );
+    if (blocked != null) return blocked;
     try {
       final updated = _currentUser!.copyWith(name: name);
       await _firestore
@@ -408,6 +448,11 @@ class AppState extends ChangeNotifier {
 
   Future<ClassModel> createClass({required String name, required String subject, required String description}) async {
     _isLoading = true; notifyListeners();
+    final existingCount = _classes.where((c) => c.teacherId == _currentUser!.id).length;
+    if (existingCount >= 5) {
+      _isLoading = false; notifyListeners();
+      throw Exception('Class limit reached. Maximum 5 classes per teacher.');
+    }
     final cls = ClassModel(
       name: name,
       subject: subject,
@@ -515,6 +560,15 @@ class AppState extends ChangeNotifier {
   }
 
   Future<String?> joinClass(String code) async {
+    final rl = RateLimiter.instance;
+    final userId = _currentUser?.id ?? 'anon';
+    final blocked = rl.check(
+      'joinclass:$userId',
+      maxAttempts: 3,
+      window: const Duration(minutes: 5),
+      blockDuration: const Duration(minutes: 15),
+    );
+    if (blocked != null) return blocked;
     try {
       final query = await _firestore.collection('classes').where('classCode', isEqualTo: code.toUpperCase()).get();
       if (query.docs.isEmpty) return 'Class not found';
@@ -654,6 +708,12 @@ class AppState extends ChangeNotifier {
     int maxAttempts = 1,
   }) async {
     _isLoading = true; notifyListeners();
+    final existingCount = _tests.where((t) =>
+        _classes.any((c) => c.teacherId == _currentUser!.id && c.id == t.classId)).length;
+    if (existingCount >= 20) {
+      _isLoading = false; notifyListeners();
+      throw Exception('Test limit reached. Maximum 20 tests per teacher.');
+    }
     final cls = _classes.firstWhere((c) => c.id == classId);
     final test = TestModel(
       title: title,
@@ -757,6 +817,14 @@ class AppState extends ChangeNotifier {
     required String testTitle,
     required Map<String, int> answers,
   }) async {
+    // Check maxAttempts enforcement
+    final existing = _attempts.where((a) =>
+        a.testId == testId && a.userId == _currentUser!.id).length;
+    // Find the test to get maxAttempts
+    final test = _tests.firstWhere((t) => t.id == testId, orElse: () => throw Exception('Test not found'));
+    if (existing >= test.maxAttempts) {
+      throw Exception('Maximum attempts reached for this test.');
+    }
     final attempt = QuizAttempt(
       testId: testId,
       testTitle: testTitle,

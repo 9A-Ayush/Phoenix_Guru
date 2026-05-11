@@ -58,7 +58,15 @@ class _JoinLiveQuizScreenState extends State<JoinLiveQuizScreen> {
     if (pin.length < 6) return;
     setState(() { _loading = true; _error = null; });
 
-    final session = await _svc.findSessionByPin(pin);
+    LiveSession? session;
+    try {
+      session = await _svc.findSessionByPin(pin);
+    } catch (e) {
+      if (mounted) {
+        setState(() { _loading = false; _error = e.toString().replaceAll('Exception: ', ''); });
+      }
+      return;
+    }
     if (!mounted) return;
 
     if (session == null) {
@@ -80,7 +88,7 @@ class _JoinLiveQuizScreenState extends State<JoinLiveQuizScreen> {
     final appState = context.read<AppState>();
     TestModel? test;
     try {
-      test = appState.allTests.firstWhere((t) => t.id == session.testId);
+      test = appState.allTests.firstWhere((t) => t.id == session!.testId);
     } catch (_) {
       // Not in local cache — fetch from Firestore directly
       try {
@@ -131,7 +139,14 @@ class _JoinLiveQuizScreenState extends State<JoinLiveQuizScreen> {
 
     // If no preview yet, look up now
     if (session == null) {
-      session = await _svc.findSessionByPin(pin);
+      try {
+        session = await _svc.findSessionByPin(pin);
+      } catch (e) {
+        if (mounted) {
+          setState(() { _loading = false; _error = e.toString().replaceAll('Exception: ', ''); });
+        }
+        return;
+      }
       if (!mounted) return;
 
       if (session == null) {
