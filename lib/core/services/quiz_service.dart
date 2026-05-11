@@ -168,12 +168,13 @@ class QuizService {
   }) async {
     try {
       // Count total answers by this participant in this session
+      // Cap = 30 to support quizzes/tests up to 30 questions
       final totalAnswers = await _answers
           .where('sessionId', isEqualTo: sessionId)
           .where('participantId', isEqualTo: participantId)
           .count()
           .get();
-      if (totalAnswers.count != null && totalAnswers.count! >= 15) {
+      if (totalAnswers.count != null && totalAnswers.count! >= 30) {
         return 'Answer limit reached for this session.';
       }
 

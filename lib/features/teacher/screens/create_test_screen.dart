@@ -111,6 +111,7 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
     if (_selectedClassId == null) { _showError('Please select a class'); return; }
     if (_expiresAt == null)       { _showError('Please set an expiration date & time'); return; }
     if (_questions.isEmpty)       { _showError('Add at least one question'); return; }
+    if (_questions.length > 30)   { _showError('Maximum 30 questions per test'); return; }
 
     setState(() => _loading = true);
     final questions = _questions.map((q) => QuizQuestion(

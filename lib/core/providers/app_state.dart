@@ -717,6 +717,10 @@ class AppState extends ChangeNotifier {
     int maxAttempts = 1,
   }) async {
     _isLoading = true; notifyListeners();
+    if (questions.length > 30) {
+      _isLoading = false; notifyListeners();
+      throw Exception('Maximum 30 questions per test.');
+    }
     final existingCount = _tests.where((t) =>
         _classes.any((c) => c.teacherId == _currentUser!.id && c.id == t.classId)).length;
     if (existingCount >= 20) {

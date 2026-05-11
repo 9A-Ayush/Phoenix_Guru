@@ -68,6 +68,10 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       _showError('Add at least one question');
       return;
     }
+    if (_questions.length > 30) {
+      _showError('Maximum 30 questions per quiz');
+      return;
+    }
 
     setState(() => _loading = true);
 
