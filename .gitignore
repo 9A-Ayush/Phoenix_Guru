@@ -61,3 +61,6 @@ gemini_api_key.txt
 gemini_config.json
 **/secrets.dart
 **/api_keys.dart
+
+# Future feature planning docs (not ready for implementation)
+FUTURE_AI_IMPORT.md
