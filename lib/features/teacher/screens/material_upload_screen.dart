@@ -804,9 +804,10 @@ class _UploadZone extends StatelessWidget {
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 48, height: 48,
+                    width: 40, height: 40,
                     decoration: BoxDecoration(
                       color: _primary.withValues(alpha: 0.10),
                       shape: BoxShape.circle,
@@ -814,10 +815,10 @@ class _UploadZone extends StatelessWidget {
                     child: const Icon(
                       Icons.cloud_upload_outlined,
                       color: _primary,
-                      size: 22,
+                      size: 20,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     'Drag & drop or browse',
                     style: GoogleFonts.poppins(
@@ -826,17 +827,17 @@ class _UploadZone extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     'PDF · DOC · JPG · Max 20MB',
                     style: GoogleFonts.poppins(color: _fm, fontSize: 11),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   GestureDetector(
                     onTap: onBrowse,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 7,
+                        horizontal: 20, vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         color: _bgCard2,
