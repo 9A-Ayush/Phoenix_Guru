@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/models.dart';
@@ -908,6 +909,15 @@ class _MenuItem extends StatelessWidget {
 
 // ── Quiz (Live) Page ──────────────────────────────────────────────────────────
 
+String _statusLabel(LiveSessionStatus status) {
+  switch (status) {
+    case LiveSessionStatus.waiting: return 'Waiting';
+    case LiveSessionStatus.active: return 'Live';
+    case LiveSessionStatus.showingResult: return 'Showing Result';
+    case LiveSessionStatus.ended: return 'Ended';
+  }
+}
+
 class TeacherQuizPage extends StatelessWidget {
   const TeacherQuizPage({super.key});
 
@@ -934,7 +944,6 @@ class TeacherQuizPage extends StatelessWidget {
       return;
     }
 
-    // Multiple tests — show picker
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -950,19 +959,29 @@ class TeacherQuizPage extends StatelessWidget {
   }
 
   Future<void> _launchSession(BuildContext context, TestModel test) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final nav = Navigator.of(context);
-
-    // Navigate to lobby — lobby creates the session internally
-    nav.push(MaterialPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => LiveSessionLobbyScreen(test: test),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use watch so the button reacts when tests load from Firestore
     final tests = context.watch<AppState>().allTests;
+    final hostId = context.read<AppState>().currentUser?.id ?? '';
+
+    // Stream active sessions for this teacher
+    final activeSessionsStream = FirebaseFirestore.instance
+        .collection('live_sessions')
+        .where('hostId', isEqualTo: hostId)
+        .where('status', whereIn: [
+          LiveSessionStatus.waiting.name,
+          LiveSessionStatus.active.name,
+          LiveSessionStatus.showingResult.name,
+        ])
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => LiveSession.fromMap(d.data()))
+            .toList());
 
     return SafeArea(
       bottom: false,
@@ -975,6 +994,103 @@ class TeacherQuizPage extends StatelessWidget {
                   fontSize: 22,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 20),
+
+          // ── Active sessions banner ────────────────────────────────────
+          StreamBuilder<List<LiveSession>>(
+            stream: activeSessionsStream,
+            builder: (context, snapshot) {
+              final sessions = snapshot.data ?? [];
+              if (sessions.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Container(
+                      width: 8, height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${sessions.length} Active Session${sessions.length > 1 ? 's' : ''}',
+                      style: GoogleFonts.poppins(
+                          color: AppColors.success,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  ...sessions.map((s) {
+                    // Find the test for this session
+                    final test = tests.where((t) => t.id == s.testId).firstOrNull;
+                    return GestureDetector(
+                      onTap: () {
+                        if (test != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LiveSessionLobbyScreen(
+                                test: test,
+                                existingSession: s,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.successLight,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: AppColors.success.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Symbols.live_tv,
+                                color: AppColors.success, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(s.testTitle,
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              Text(
+                                'PIN: ${s.pin}  •  ${s.participantCount} joined  •  ${_statusLabel(s.status)}',
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.success,
+                                    fontSize: 11),
+                              ),
+                            ]),
+                          ),
+                          const Icon(Symbols.arrow_forward,
+                              color: AppColors.success, size: 16),
+                        ]),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                ],
+              );
+            },
+          ),
 
           // ── Create new quiz from scratch ──────────────────────────────
           GestureDetector(

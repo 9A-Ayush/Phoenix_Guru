@@ -14,7 +14,13 @@ import 'live_quiz_host_screen.dart';
 
 class LiveSessionLobbyScreen extends StatefulWidget {
   final TestModel test;
-  const LiveSessionLobbyScreen({super.key, required this.test});
+  final LiveSession? existingSession; // pass to rejoin an active session
+
+  const LiveSessionLobbyScreen({
+    super.key,
+    required this.test,
+    this.existingSession,
+  });
 
   @override
   State<LiveSessionLobbyScreen> createState() => _LiveSessionLobbyScreenState();
@@ -53,6 +59,13 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen>
   }
 
   Future<void> _createSession() async {
+    // If an existing session was passed, reuse it instead of creating a new one
+    if (widget.existingSession != null) {
+      setState(() { _session = widget.existingSession; _creating = false; });
+      _listenSession(widget.existingSession!.id);
+      _listenParticipants(widget.existingSession!.id);
+      return;
+    }
     try {
       final user = context.read<AppState>().currentUser!;
       final session = await _svc.startSession(
@@ -66,7 +79,6 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen>
       _listenParticipants(session.id);
     } catch (e) {
       if (!mounted) return;
-      // Show error and go back — don't leave user stuck on spinner
       final msg = e.toString().replaceAll('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(msg,
