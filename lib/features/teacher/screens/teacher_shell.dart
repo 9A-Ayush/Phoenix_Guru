@@ -320,26 +320,54 @@ class TeacherTestsPage extends StatelessWidget {
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.w700)),
-            GestureDetector(
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const CreateTestScreen())),
-              child: Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  const Icon(Symbols.add, color: Colors.white, size: 18),
-                  const SizedBox(width: 6),
-                  Text('New Test',
-                      style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600)),
-                ]),
+            Row(children: [
+              // Test Results button
+              GestureDetector(
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const TeacherTestResultsScreen())),
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                      color: AppColors.successLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: AppColors.success.withValues(alpha: 0.3))),
+                  child: Row(children: [
+                    const Icon(Symbols.bar_chart,
+                        color: AppColors.success, size: 16),
+                    const SizedBox(width: 5),
+                    Text('Results',
+                        style: GoogleFonts.poppins(
+                            color: AppColors.success,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              // New Test button
+              GestureDetector(
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const CreateTestScreen())),
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Row(children: [
+                    const Icon(Symbols.add, color: Colors.white, size: 18),
+                    const SizedBox(width: 6),
+                    Text('New Test',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              ),
+            ]),
           ]),
         ),
         const SizedBox(height: 12),
@@ -1152,48 +1180,6 @@ class TeacherQuizPage extends StatelessWidget {
               ]),
             ),
           ).animate().fadeIn(delay: 160.ms),
-          const SizedBox(height: 16),
-          // View Test Results card
-          GestureDetector(
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const TeacherTestResultsScreen())),
-            child: Container(
-              height: 76,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border)),
-              child: Row(children: [
-                Container(
-                  width: 46, height: 46,
-                  decoration: BoxDecoration(
-                      color: AppColors.successLight,
-                      borderRadius: BorderRadius.circular(14)),
-                  child: const Icon(Symbols.bar_chart,
-                      color: AppColors.success, size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                    Text('Test Results',
-                        style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600)),
-                    Text('View scores, grades & flagged questions',
-                        style: GoogleFonts.poppins(
-                            color: AppColors.textSecondary, fontSize: 12)),
-                  ]),
-                ),
-                const Icon(Symbols.chevron_right,
-                    color: AppColors.textMuted, size: 20),
-              ]),
-            ),
-          ),
           const SizedBox(height: 24),
           Text('How Live Quiz Works',
               style: GoogleFonts.poppins(
