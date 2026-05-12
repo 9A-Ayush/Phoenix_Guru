@@ -3,12 +3,15 @@
  * 
  * Deploy with: firebase deploy --only functions
  * 
- * Required config:
- * firebase functions:config:set cloudinary.cloud_name="YOUR_CLOUD_NAME"
- * firebase functions:config:set cloudinary.api_key="YOUR_API_KEY"
- * firebase functions:config:set cloudinary.api_secret="YOUR_API_SECRET"
- * firebase functions:config:set cloudinary.upload_preset="YOUR_PRESET"
+ * Environment variables (set in functions/.env file):
+ * CLOUDINARY_CLOUD_NAME=your_cloud_name
+ * CLOUDINARY_API_KEY=your_api_key
+ * CLOUDINARY_API_SECRET=your_api_secret
+ * CLOUDINARY_UPLOAD_PRESET=your_preset
  */
+
+// Load environment variables from .env file
+require('dotenv').config();
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -18,6 +21,16 @@ admin.initializeApp();
 
 const DAILY_LIMIT_BYTES = 500 * 1024 * 1024; // 500 MB
 const TOTAL_LIMIT_BYTES = 25 * 1024 * 1024 * 1024; // 25 GB
+
+// Get Cloudinary config from environment variables
+const getCloudinaryConfig = () => {
+  return {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+    uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
+  };
+};
 
 /**
  * Generate signed Cloudinary upload parameters
@@ -111,14 +124,24 @@ exports.getCloudinarySignature = functions.https.onRequest(async (req, res) => {
     }
 
     // 5. Generate Cloudinary signature
+    const config = getCloudinaryConfig();
+    
+    if (!config.cloudName || !config.apiKey || !config.apiSecret || !config.uploadPreset) {
+      res.status(500).json({
+        error: {
+          message: 'Cloudinary configuration missing. Check functions/.env file.'
+        }
+      });
+      return;
+    }
+
     const timestamp = Math.floor(Date.now() / 1000);
     const folder = 'phoenix_guru/materials';
-    const uploadPreset = functions.config().cloudinary.upload_preset;
 
     const paramsToSign = {
       timestamp: timestamp,
       folder: folder,
-      upload_preset: uploadPreset,
+      upload_preset: config.uploadPreset,
     };
 
     // Create signature string
@@ -129,21 +152,18 @@ exports.getCloudinarySignature = functions.https.onRequest(async (req, res) => {
 
     const signature = crypto
       .createHash('sha256')
-      .update(signatureString + functions.config().cloudinary.api_secret)
+      .update(signatureString + config.apiSecret)
       .digest('hex');
 
     // 6. Return signed upload parameters
-    const cloudName = functions.config().cloudinary.cloud_name;
-    const apiKey = functions.config().cloudinary.api_key;
-
     res.status(200).json({
-      upload_url: `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      upload_url: `https://api.cloudinary.com/v1_1/${config.cloudName}/auto/upload`,
       fields: {
         timestamp: timestamp,
         folder: folder,
-        upload_preset: uploadPreset,
+        upload_preset: config.uploadPreset,
         signature: signature,
-        api_key: apiKey,
+        api_key: config.apiKey,
       }
     });
 

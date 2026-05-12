@@ -77,3 +77,4 @@ ios/Runner/GoogleService-Info.plist
 functions/node_modules/
 functions/.runtimeconfig.json
 functions/package-lock.json
+functions/.env
