@@ -157,8 +157,10 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } else {
-      // Sign-out event — only reset if we're not mid-Google-flow.
-      if (_authStatus != AuthStatus.needsRolePicker) {
+      // Sign-out event — only reset if we're not mid-Google-flow and haven't
+      // already been cleared by logout() (which signs out first, then clears).
+      if (_authStatus != AuthStatus.needsRolePicker &&
+          _authStatus != AuthStatus.unauthenticated) {
         _currentUser = null;
         _authStatus = AuthStatus.unauthenticated;
         _cancelStreams();
@@ -382,8 +384,16 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Sign out of Firebase FIRST so the auth token is invalidated before
+    // any in-flight Firestore listener retries — prevents PERMISSION_DENIED
+    // errors that appear when streams are cancelled while the token is still
+    // technically active.
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+
+    // Now cancel streams and clear local state.
     _cancelStreams();
-    // Reset Google sign-in rate limit for this user on clean logout
+    // Reset Google sign-in rate limit for this user on clean logout.
     if (_currentUser != null) {
       RateLimiter.instance.reset('google_signin:${_currentUser!.email}');
     }
@@ -393,8 +403,6 @@ class AppState extends ChangeNotifier {
     _tests.clear();
     _attempts.clear();
     notifyListeners();
-    await _googleSignIn.signOut();
-    await _auth.signOut();
   }
 
   /// Converts Firebase exceptions into user-friendly messages.

@@ -15,6 +15,7 @@ import 'class_detail_screen.dart';
 import 'live_quiz_host_screen.dart';
 import 'live_session_lobby_screen.dart';
 import 'create_quiz_screen.dart';
+import 'active_sessions_screen.dart';
 import 'test_results_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
@@ -969,8 +970,8 @@ class TeacherQuizPage extends StatelessWidget {
     final tests = context.watch<AppState>().allTests;
     final hostId = context.read<AppState>().currentUser?.id ?? '';
 
-    // Stream active sessions for this teacher
-    final activeSessionsStream = FirebaseFirestore.instance
+    // Stream count of active sessions for the button badge
+    final activeCountStream = FirebaseFirestore.instance
         .collection('live_sessions')
         .where('hostId', isEqualTo: hostId)
         .where('status', whereIn: [
@@ -979,118 +980,87 @@ class TeacherQuizPage extends StatelessWidget {
           LiveSessionStatus.showingResult.name,
         ])
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => LiveSession.fromMap(d.data()))
-            .toList());
+        .map((snap) => snap.docs.length);
 
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Live Quiz',
-              style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 20),
-
-          // ── Active sessions banner ────────────────────────────────────
-          StreamBuilder<List<LiveSession>>(
-            stream: activeSessionsStream,
-            builder: (context, snapshot) {
-              final sessions = snapshot.data ?? [];
-              if (sessions.isEmpty) return const SizedBox.shrink();
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.success,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${sessions.length} Active Session${sessions.length > 1 ? 's' : ''}',
-                      style: GoogleFonts.poppins(
-                          color: AppColors.success,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ]),
-                  const SizedBox(height: 8),
-                  ...sessions.map((s) {
-                    // Find the test for this session
-                    final test = tests.where((t) => t.id == s.testId).firstOrNull;
-                    return GestureDetector(
-                      onTap: () {
-                        if (test != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LiveSessionLobbyScreen(
-                                test: test,
-                                existingSession: s,
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.successLight,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: AppColors.success.withValues(alpha: 0.3)),
+          // Header row with title + active sessions button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Live Quiz',
+                  style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700)),
+              StreamBuilder<int>(
+                stream: activeCountStream,
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ActiveSessionsScreen(
+                          hostId: hostId,
+                          tests: tests,
                         ),
-                        child: Row(children: [
-                          Container(
-                            width: 36, height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Symbols.live_tv,
-                                color: AppColors.success, size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text(s.testTitle,
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                              Text(
-                                'PIN: ${s.pin}  •  ${s.participantCount} joined  •  ${_statusLabel(s.status)}',
-                                style: GoogleFonts.poppins(
-                                    color: AppColors.success,
-                                    fontSize: 11),
-                              ),
-                            ]),
-                          ),
-                          const Icon(Symbols.arrow_forward,
-                              color: AppColors.success, size: 16),
-                        ]),
                       ),
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                ],
-              );
-            },
+                    ),
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: count > 0
+                            ? AppColors.successLight
+                            : AppColors.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: count > 0
+                              ? AppColors.success.withValues(alpha: 0.4)
+                              : AppColors.border,
+                        ),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (count > 0) ...[
+                          Container(
+                            width: 8, height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.success,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Icon(
+                          Symbols.live_tv,
+                          color: count > 0
+                              ? AppColors.success
+                              : AppColors.textMuted,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          count > 0 ? '$count Active' : 'Sessions',
+                          style: GoogleFonts.poppins(
+                            color: count > 0
+                                ? AppColors.success
+                                : AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ]),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
 
           // ── Create new quiz from scratch ──────────────────────────────
           GestureDetector(
