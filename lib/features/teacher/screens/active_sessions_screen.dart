@@ -199,11 +199,11 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
           LiveSessionStatus.active.name,
           LiveSessionStatus.showingResult.name,
         ])
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs
             .map((d) => LiveSession.fromMap(d.data()))
-            .toList());
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
 
     return Scaffold(
       backgroundColor: AppColors.bg,
