@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +12,10 @@ const _uuid = Uuid();
 const _totalFreeBytes = 25 * 1024 * 1024 * 1024; // 25 GB
 const _dailyLimitBytes = 500 * 1024 * 1024;      // 500 MB
 const _maxFileSizeBytes = 20 * 1024 * 1024;      // 20 MB
+
+// Cloudinary config (exposed in app, but unsigned preset limits uploads)
+const _cloudName = 'dwv7xyucs';
+const _uploadPreset = 'phoenix_guru_unsigned';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODELS
@@ -90,16 +93,10 @@ class DailyUsage {
 
 class CloudinaryService {
   final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
-
-  // TODO: Replace with your Firebase Functions URL after deployment
-  static const _functionsBaseUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net';
 
   CloudinaryService({
     FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // ───────────────────────────────────────────────────────────────────────────
   // QUOTA & USAGE TRACKING
@@ -211,10 +208,13 @@ class CloudinaryService {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // UPLOAD
+  // UPLOAD (Direct to Cloudinary, no Firebase Functions)
   // ───────────────────────────────────────────────────────────────────────────
 
-  /// Upload file to Cloudinary via Firebase Function (secure signed upload)
+  /// Upload file directly to Cloudinary using unsigned preset
+  /// 
+  /// Note: This is less secure than signed uploads via Firebase Functions,
+  /// but doesn't require Blaze plan. Rate limits are client-side only.
   Future<CloudinaryResult> uploadFile({
     required File file,
     required String fileName,
@@ -227,36 +227,26 @@ class CloudinaryService {
       throw 'File exceeds 20 MB limit';
     }
 
-    // 2. Get Firebase Auth token
-    final token = await _auth.currentUser?.getIdToken();
-    if (token == null) {
-      throw 'Not authenticated';
-    }
-
-    // 3. Check daily limit
+    // 2. Check daily limit (client-side only - can be bypassed)
     final dailyUsage = await getDailyUsage(teacherId);
     if (dailyUsage.usedBytes + fileBytes > _dailyLimitBytes) {
       throw 'Daily upload limit reached. ${dailyUsage.remainingMB} MB remaining today.';
     }
 
-    // 4. Check total storage quota
+    // 3. Check total storage quota (client-side only - can be bypassed)
     final quota = await getStorageQuota(teacherId);
     if (quota.usedBytes + fileBytes > _totalFreeBytes) {
       throw 'Storage quota exceeded. ${quota.remainingGB} GB remaining.';
     }
 
-    // 5. Get signed upload parameters from Firebase Function
-    final signedParams = await _getSignedUploadParams(token, teacherId, fileBytes);
+    // 4. Upload directly to Cloudinary
+    final uri = Uri.parse(
+      'https://api.cloudinary.com/v1_1/$_cloudName/auto/upload'
+    );
 
-    // 6. Upload to Cloudinary
-    final uri = Uri.parse(signedParams['upload_url'] as String);
-    final request = http.MultipartRequest('POST', uri);
-
-    // Add signed fields
-    final fields = signedParams['fields'] as Map<String, dynamic>;
-    fields.forEach((key, value) {
-      request.fields[key] = value.toString();
-    });
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['upload_preset'] = _uploadPreset
+      ..fields['folder'] = 'phoenix_guru/materials';
 
     // Add file
     final multipartFile = await http.MultipartFile.fromPath('file', file.path);
@@ -283,36 +273,10 @@ class CloudinaryService {
 
     final result = CloudinaryResult.fromJson(jsonDecode(response.body));
 
-    // 7. Increment daily usage tracker
+    // 5. Increment daily usage tracker
     await _incrementDailyUsage(teacherId, fileBytes);
 
     return result;
-  }
-
-  /// Call Firebase Function to get signed upload parameters
-  Future<Map<String, dynamic>> _getSignedUploadParams(
-    String token,
-    String teacherId,
-    int fileBytes,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$_functionsBaseUrl/getCloudinarySignature'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'teacherId': teacherId,
-        'fileBytes': fileBytes,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw error['error']?['message'] ?? 'Failed to get upload signature';
-    }
-
-    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   // ───────────────────────────────────────────────────────────────────────────

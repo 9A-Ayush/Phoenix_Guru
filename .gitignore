@@ -65,16 +65,11 @@ gemini_config.json
 **/secrets.dart
 **/api_keys.dart
 
-# Future feature planning docs (not ready for implementation)
-FUTURE_AI_IMPORT.md
-FUTURE_CLOUDINARY_MEDIA_UPLOAD.md
+# Documentation files (keep local only)
+*.md
+*.txt
+!README.md
 
 # Firebase config files — contain API keys, keep local only
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
-
-# Firebase Functions
-functions/node_modules/
-functions/.runtimeconfig.json
-functions/package-lock.json
-functions/.env
