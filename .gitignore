@@ -54,6 +54,9 @@ graphify-out/
 # Agent
 .agent/
 
+# Kiro
+.kiro/
+
 # Gemini API & secrets
 .env
 .env.*
