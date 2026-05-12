@@ -6,6 +6,17 @@ A full-stack Flutter education platform for teachers and students, featuring liv
 
 ---
 
+## Recent Changes
+
+### May 12, 2026
+- **Material Upload Screen** — `MaterialUploadScreen` integrated into `ClassDetailScreen` Material tab. File picker with type chips (PDF/Image/Doc/Link), class selector, 20 MB limit, upload progress bar. Uses `file_picker ^8.0.0`.
+- **Test Results moved to Tests tab** — "Results" button added to `TeacherTestsPage` header (green, next to "New Test"). Removed from Quiz tab.
+- **Headers standardized** — All teacher screens now use the `1C1240→bg` gradient header style matching `ClassDetailScreen`.
+- **Active Sessions screen** — Multi-select with "Close (N)" button in upper-right corner. Long-press for single-session close. Tap to reopen lobby.
+- **Lint fix** — Removed unused `maxLines` parameter from `_AppInput` in `material_upload_screen.dart`.
+
+---
+
 ## Project Structure
 
 ```
@@ -51,7 +62,8 @@ lib/
             ├── active_sessions_screen.dart    # Active sessions list, multi-select, close
             ├── live_session_lobby_screen.dart # PIN + QR display, participant grid
             ├── live_quiz_host_screen.dart # Real-time answer distribution
-            ├── test_results_screen.dart
+            ├── test_results_screen.dart   # Grade bars, flagged questions, student scores
+            ├── material_upload_screen.dart # File picker, type chips, class selector
             ├── edit_profile_screen.dart
             ├── change_password_screen.dart
             ├── notifications_screen.dart
@@ -272,27 +284,23 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 |---|---|---|
 | T01 | Dashboard | Quick actions, stats |
 | T02 | Classes | Subject icons, tap → detail |
-| T03 | Tests | Cards with status, three-dot menu |
-| T04 | Live Quiz | Create Quiz + Start from Test |
+| T03 | Tests | Cards with status, three-dot menu + "Results" button |
+| T04 | Live Quiz | Create Quiz + Start from Test + "Sessions" badge button |
 | T05 | Profile | Stats, gradient avatar + Teacher badge |
-| T06 | Class Detail | Real-time students/tests, multi-select remove |
+| T06 | Class Detail | Real-time students/tests/material tabs, multi-select remove |
 | T07 | Create Class | Subject dropdown, auto class code (max 5) |
 | T08 | Create Test | Question builder, date+time picker, attempts (max 30 Qs) |
-| T09 | Create Quiz | Lightweight live quiz builder (max 30 Qs) |
+| T09 | Create Quiz | Lightweight live quiz builder (no class/expiry, max 30 Qs) |
 | T10 | Edit Test | Edit name, questions, expiry |
 | T11 | Live Session Lobby | PIN + QR, participant grid, lock room |
-| T12 | Active Sessions | All active sessions, multi-select close, long-press single close |
+| T12 | Active Sessions | All active sessions, multi-select close (top-right), long-press single close |
 | T13 | Live Quiz Host | Real-time answer distribution |
 | T14 | Test Results | Live Firestore scores, grade bars, flagged questions |
-| T15 | Edit Profile | Name edit → Firestore |
-| T16 | Change Password | Re-auth + Firebase Auth update |
-| T17 | Notifications | 5 toggles → Firestore (3s debounce) |
-| T18 | Help & Support | FAQ accordion + contact cards |
-| T13 | Test Results | Live Firestore scores, flagged questions |
-| T14 | Edit Profile | Name edit → Firestore |
-| T15 | Change Password | Re-auth + Firebase Auth update |
-| T16 | Notifications | 5 toggles → Firestore (3s debounce) |
-| T17 | Help & Support | FAQ accordion + contact cards |
+| T15 | Material Upload | File picker, type chips, class selector, progress bar |
+| T16 | Edit Profile | Name edit → Firestore |
+| T17 | Change Password | Re-auth + Firebase Auth update |
+| T18 | Notifications | 5 toggles → Firestore (3s debounce) |
+| T19 | Help & Support | FAQ accordion + contact cards |
 
 ---
 
@@ -339,6 +347,7 @@ firebase deploy --only firestore --project <your-project-id>
 | `firebase_storage` | ^11.7.0 | File uploads |
 | `google_sign_in` | ^6.2.1 | Google OAuth |
 | `qr_flutter` | ^4.1.0 | QR code generation |
+| `file_picker` | ^8.0.0 | File selection for material upload |
 | `provider` | ^6.1.2 | State management |
 | `google_fonts` | ^6.2.1 | Poppins / Inter |
 | `flutter_animate` | ^4.5.0 | Animations |
