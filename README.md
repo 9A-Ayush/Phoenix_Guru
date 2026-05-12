@@ -2,13 +2,14 @@
 
 A full-stack Flutter education platform for teachers and students, featuring live quizzes, class management, test creation, and real-time leaderboards.
 
-**Stack:** Flutter · Provider · Firebase (Auth + Firestore + Storage) · Google Sign-In · Google Fonts · Material Symbols · flutter_animate
+**Stack:** Flutter · Provider · Firebase (Auth + Firestore) · Cloudinary · Google Sign-In · Google Fonts · Material Symbols · flutter_animate
 
 ---
 
 ## Recent Changes
 
 ### May 12, 2026
+- **Cloudinary Integration** — Migrated from Firebase Storage to Cloudinary for material uploads. Uses unsigned uploads (no Firebase Functions required). 25 GB free storage, 500 MB/day per teacher rate limit. Requires unsigned upload preset `phoenix_guru_unsigned` in Cloudinary dashboard.
 - **Material Upload Screen** — `MaterialUploadScreen` integrated into `ClassDetailScreen` Material tab. File picker with type chips (PDF/Image/Doc/Link), class selector, 20 MB limit, upload progress bar. Uses `file_picker ^8.0.0`.
 - **Test Results moved to Tests tab** — "Results" button added to `TeacherTestsPage` header (green, next to "New Test"). Removed from Quiz tab.
 - **Headers standardized** — All teacher screens now use the `1C1240→bg` gradient header style matching `ClassDetailScreen`.
@@ -27,6 +28,7 @@ lib/
 │   ├── providers/
 │   │   └── app_state.dart                 # Central ChangeNotifier — auth, data, Firestore ops
 │   ├── services/
+│   │   ├── cloudinary_service.dart        # Material upload to Cloudinary (unsigned)
 │   │   ├── quiz_service.dart              # Isolated Firestore logic for live quiz sessions
 │   │   └── rate_limiter.dart              # In-memory client-side rate limiter (singleton)
 │   └── theme/
@@ -87,13 +89,16 @@ Firebase Auth (Email/Password + Google Sign-In)
      │
      ├── Firestore collections
      │     ├── /users/{uid}
+     │     │     └── /uploadTracker/{doc}   ← daily upload tracking
      │     ├── /classes/{classId}
+     │     │     └── /materials/{materialId} ← material metadata
      │     ├── /tests/{testId}
      │     ├── /attempts/{attemptId}
      │     ├── /live_sessions/{sessionId}
      │     │     └── /participants/{userId}
      │     └── /live_answers/{answerId}
      │
+     ├── CloudinaryService — unsigned uploads, quota tracking
      ├── QuizService — isolated live quiz Firestore ops
      ├── RateLimiter — in-memory singleton, no external deps
      │
@@ -125,6 +130,9 @@ All rate limits are client-side (in-memory, resets on app restart). Server-side 
 | Create Test | Max 20 per teacher | Hard cap |
 | Questions per test/quiz | Max 30 | Hard cap |
 | Start Live Session | 1 active at a time | Hard block |
+| **Material Upload** | **500 MB/day** | **Client-side** |
+| **Total Storage** | **25 GB** | **Cloudinary free tier** |
+| **Max File Size** | **20 MB** | **Hard cap** |
 
 ### Student Only
 | Action | Limit | Type |
@@ -203,7 +211,9 @@ All rate limits are client-side (in-memory, resets on app restart). Server-side 
 | Collection | Key | Description |
 |---|---|---|
 | `users` | `{uid}` | Profile — name, email, role, createdAt, notificationPrefs |
+| `users/{uid}/uploadTracker` | `daily` | Daily upload tracking — date, bytesUsed |
 | `classes` | `{classId}` | Class — teacherId, classCode, studentIds |
+| `classes/{classId}/materials` | `{materialId}` | Material metadata — name, url, publicId, sizeBytes |
 | `tests` | `{testId}` | Test — questions (max 30), duration, expiresAt, maxAttempts |
 | `attempts` | `{attemptId}` | Quiz attempt — userId, answers map, completedAt |
 | `live_sessions` | `{sessionId}` | Session — hostId, pin, currentQuestion, status |
@@ -308,7 +318,30 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 
 ### Prerequisites
 - Flutter 3.22+ · Dart 3.3+
-- Firebase project with Firestore, Auth, Storage enabled
+- Firebase project with Firestore, Auth enabled
+- Cloudinary account (free tier: 25 GB storage)
+
+### Cloudinary Setup
+1. Create account at [cloudinary.com](https://cloudinary.com)
+2. Go to Settings → Upload → Upload Presets
+3. Create preset:
+   - **Name**: `phoenix_guru_unsigned`
+   - **Signing mode**: Unsigned
+   - **Folder**: `phoenix_guru/materials`
+   - **Max file size**: 20 MB
+   - **Allowed formats**: pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,webp,mp4,mov
+
+### Firebase Setup
+1. Create project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable **Authentication** → Email/Password + Google
+3. Enable **Firestore Database** (production mode)
+4. Add `google-services.json` → `android/app/` *(gitignored — keep local)*
+5. Add `GoogleService-Info.plist` → `ios/Runner/` *(gitignored — keep local)*
+6. Register Android SHA-1 in Firebase Console → Project Settings
+7. Deploy rules and indexes:
+```bash
+firebase deploy --only firestore --project <your-project-id>
+```
 
 ### Install & Run
 ```bash
@@ -322,20 +355,7 @@ flutter run
 - `.env` file with `GOOGLE_API_KEY` is gitignored
 - All rate limits are client-side (in-memory) — resets on app restart
 - Server-side enforcement via Firestore security rules (deployed)
-1. Create project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable **Authentication** → Email/Password + Google
-3. Enable **Firestore Database** (production mode)
-4. Enable **Firebase Storage**
-5. Add `google-services.json` → `android/app/` *(gitignored — keep local)*
-6. Add `GoogleService-Info.plist` → `ios/Runner/` *(gitignored — keep local)*
-7. Register Android SHA-1 in Firebase Console → Project Settings
-8. Deploy rules and indexes:
-```bash
-firebase deploy --only firestore --project <your-project-id>
-```
-
-> **Security:** `google-services.json` and `GoogleService-Info.plist` are gitignored.
-> Never commit them to a public repository.
+- Cloudinary upload preset is exposed in APK (unsigned uploads) — acceptable for MVP, consider Firebase Functions for production
 
 ### Dependencies
 
@@ -344,8 +364,8 @@ firebase deploy --only firestore --project <your-project-id>
 | `firebase_core` | ^2.27.0 | Firebase initialization |
 | `firebase_auth` | ^4.20.0 | Email/Password + Google auth |
 | `cloud_firestore` | ^4.17.0 | Real-time database |
-| `firebase_storage` | ^11.7.0 | File uploads |
 | `google_sign_in` | ^6.2.1 | Google OAuth |
+| `http` | ^1.2.0 | HTTP client for Cloudinary uploads |
 | `qr_flutter` | ^4.1.0 | QR code generation |
 | `file_picker` | ^8.0.0 | File selection for material upload |
 | `provider` | ^6.1.2 | State management |
@@ -354,6 +374,49 @@ firebase deploy --only firestore --project <your-project-id>
 | `material_symbols_icons` | ^4.2792.2 | Icon set |
 | `uuid` | ^4.4.2 | ID generation |
 | `intl` | ^0.19.0 | Date formatting |
+
+---
+
+## Cloudinary Integration
+
+### Material Upload Flow
+```
+MaterialUploadScreen
+  ├── Select file (file_picker) → max 20 MB
+  ├── Check daily quota (500 MB/day per teacher)
+  ├── Check total quota (25 GB across all teachers)
+  ├── Upload to Cloudinary (unsigned preset)
+  │     → https://api.cloudinary.com/v1_1/dwv7xyucs/auto/upload
+  │     → folder: phoenix_guru/materials
+  ├── Save metadata to Firestore
+  │     → classes/{classId}/materials/{materialId}
+  │     → url, publicId, sizeBytes, uploadedBy, uploadedAt
+  └── Update daily usage tracker
+        → users/{teacherId}/uploadTracker/daily
+```
+
+### CloudinaryService Methods
+| Method | Description |
+|---|---|
+| `uploadFile(file, fileName, teacherId)` | Direct unsigned upload to Cloudinary |
+| `saveMaterial(classId, name, ...)` | Save material metadata to Firestore |
+| `deleteMaterial(classId, materialId)` | Delete material from Firestore |
+| `materialsStream(classId)` | Real-time stream of materials |
+| `getStorageQuota(teacherId)` | Get total storage used (25 GB limit) |
+| `getDailyUsage(teacherId)` | Get today's upload usage (500 MB limit) |
+
+### Quota Tracking
+- **Daily limit**: 500 MB per teacher (client-side, resets daily)
+- **Total storage**: 25 GB across all teachers (Cloudinary free tier)
+- **Max file size**: 20 MB per file
+- **Tracking**: Firestore `users/{uid}/uploadTracker/daily` collection
+
+### Security Notes
+- Uses **unsigned uploads** (no Firebase Functions required)
+- Upload preset `phoenix_guru_unsigned` is exposed in APK
+- Rate limits are client-side only (can be bypassed)
+- Acceptable for MVP/testing
+- Consider Firebase Functions ($0-2/month) for production security
 
 ---
 
