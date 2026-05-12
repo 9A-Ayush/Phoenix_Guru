@@ -56,13 +56,6 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
     });
   }
 
-  void _enterSelectionMode(String id) {
-    setState(() {
-      _selectionMode = true;
-      _selected.add(id);
-    });
-  }
-
   void _exitSelectionMode() {
     setState(() {
       _selectionMode = false;
@@ -109,7 +102,6 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Session info
           Row(children: [
             Container(
               width: 42, height: 42,
@@ -140,7 +132,6 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
           const SizedBox(height: 16),
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 12),
-          // Close option
           GestureDetector(
             onTap: () {
               Navigator.pop(ctx);
@@ -151,8 +142,7 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
               decoration: BoxDecoration(
                 color: AppColors.errorLight,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.2)),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
               ),
               child: Row(children: [
                 Container(
@@ -214,93 +204,143 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
             final sessions = snapshot.data ?? [];
 
             return Column(children: [
-              // ── Header ──────────────────────────────────────────────
+              // ── Header — matches class_detail_screen style ───────────
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-                color: AppColors.surface,
-                child: Row(children: [
-                  GestureDetector(
-                    onTap: _selectionMode
-                        ? _exitSelectionMode
-                        : () => Navigator.pop(context),
-                    child: Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        _selectionMode
-                            ? Icons.close_rounded
-                            : Icons.chevron_left_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF1C1240), AppColors.bg],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top row: back/cancel + right action
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _selectionMode
-                              ? '${_selected.length} selected'
-                              : 'Active Sessions',
-                          style: GoogleFonts.poppins(
+                        // Left: back or cancel
+                        GestureDetector(
+                          onTap: _selectionMode
+                              ? _exitSelectionMode
+                              : () => Navigator.pop(context),
+                          child: Container(
+                            height: 36, width: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Icon(
+                              _selectionMode
+                                  ? Icons.close_rounded
+                                  : Icons.chevron_left_rounded,
                               color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700),
+                              size: 20,
+                            ),
+                          ),
                         ),
-                        Text(
-                          '${sessions.length} session${sessions.length == 1 ? '' : 's'} running',
-                          style: GoogleFonts.poppins(
-                              color: AppColors.textSecondary, fontSize: 12),
-                        ),
+
+                        // Right: close selected OR select all
+                        if (_selectionMode && _selected.isNotEmpty)
+                          GestureDetector(
+                            onTap: _closing
+                                ? null
+                                : () => _closeSessions(_selected.toList()),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              height: 36,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.error,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.center,
+                              child: _closing
+                                  ? const SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2))
+                                  : Row(mainAxisSize: MainAxisSize.min, children: [
+                                      const Icon(Symbols.stop_circle,
+                                          color: Colors.white, size: 15),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Close (${_selected.length})',
+                                        style: GoogleFonts.poppins(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ]),
+                            ),
+                          )
+                        else if (_selectionMode)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                if (_selected.length == sessions.length) {
+                                  _selected.clear();
+                                } else {
+                                  _selected.addAll(sessions.map((s) => s.id));
+                                }
+                              });
+                            },
+                            child: Container(
+                              height: 36,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                _selected.length == sessions.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                                style: GoogleFonts.poppins(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 36),
                       ],
                     ),
-                  ),
-                  // Select all button in selection mode
-                  if (_selectionMode)
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (_selected.length == sessions.length) {
-                            _selected.clear();
-                          } else {
-                            _selected.addAll(sessions.map((s) => s.id));
-                          }
-                        });
-                      },
-                      child: Container(
-                        height: 32,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _selected.length == sessions.length
-                              ? 'Deselect All'
-                              : 'Select All',
-                          style: GoogleFonts.poppins(
-                              color: AppColors.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ),
+
+                    const SizedBox(height: 16),
+
+                    // Title
+                    Text(
+                      _selectionMode
+                          ? '${_selected.length} selected'
+                          : 'Active Sessions',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700),
                     ),
-                ]),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${sessions.length} session${sessions.length == 1 ? '' : 's'} running',
+                      style: GoogleFonts.poppins(
+                          color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
 
               // ── Session list ─────────────────────────────────────────
               Expanded(
                 child: sessions.isEmpty
                     ? Center(
-                        child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
                           const Icon(Symbols.live_tv,
                               color: AppColors.textMuted, size: 52),
                           const SizedBox(height: 12),
@@ -318,8 +358,7 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.all(20),
                         itemCount: sessions.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 10),
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (_, i) {
                           final s = sessions[i];
                           final isSelected = _selected.contains(s.id);
@@ -345,9 +384,8 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
                               }
                             },
                             onLongPress: () {
-                              if (!_selectionMode) {
-                                _showSingleCloseMenu(context, s);
-                              }
+                              if (_selectionMode) return;
+                              _showSingleCloseMenu(context, s);
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
@@ -389,7 +427,7 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
                                   ),
                                   const SizedBox(width: 12),
                                 ],
-                                // Icon
+                                // Status icon
                                 Container(
                                   width: 44, height: 44,
                                   decoration: BoxDecoration(
@@ -403,8 +441,7 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
                                 // Info
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(s.testTitle,
                                           style: GoogleFonts.poppins(
@@ -413,16 +450,14 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
                                               fontWeight: FontWeight.w600),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 3),
+                                      const SizedBox(height: 4),
                                       Row(children: [
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 7, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: statusColor
-                                                .withValues(alpha: 0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
+                                            color: statusColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
                                             _statusLabel(s.status),
@@ -452,47 +487,6 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
                         },
                       ),
               ),
-
-              // ── Close selected button ────────────────────────────────
-              if (_selectionMode && _selected.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _closing
-                          ? null
-                          : () => _closeSessions(_selected.toList()),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: _closing
-                          ? const SizedBox(
-                              width: 20, height: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2.5))
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Symbols.stop_circle,
-                                    color: Colors.white, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Close ${_selected.length} Session${_selected.length > 1 ? 's' : ''}',
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
             ]);
           },
         ),

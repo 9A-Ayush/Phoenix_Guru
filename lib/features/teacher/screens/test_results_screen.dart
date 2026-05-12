@@ -607,55 +607,71 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-      color: AppColors.surface,
-      child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            height: 34, width: 34,
-            decoration: BoxDecoration(
-                color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Symbols.arrow_back,
-                color: Colors.white, size: 18),
-          ),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1C1240), AppColors.bg],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-            Text(subtitle,
-                style: GoogleFonts.poppins(
-                    color: AppColors.textSecondary, fontSize: 12)),
-          ]),
-        ),
-        if (badge != null)
-          Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: (badgeColor ?? AppColors.success).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            alignment: Alignment.center,
-            child: Text(badge!,
-                style: GoogleFonts.poppins(
-                    color: badgeColor ?? AppColors.success,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Back button row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  height: 36, width: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Icon(Icons.chevron_left_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+              if (badge != null)
+                Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: (badgeColor ?? AppColors.success)
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(badge!,
+                      style: GoogleFonts.poppins(
+                          color: badgeColor ?? AppColors.success,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
+                ),
+            ],
           ),
-      ]),
+          const SizedBox(height: 16),
+          // Title + subtitle
+          Text(title,
+              style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(subtitle,
+              style: GoogleFonts.poppins(
+                  color: AppColors.textSecondary, fontSize: 13)),
+        ],
+      ),
     );
   }
 }
-
 // ── Summary card — uses intrinsic height, no fixed height ─────────────────────
 
 class _SummaryCard extends StatelessWidget {
