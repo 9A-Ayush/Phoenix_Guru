@@ -291,7 +291,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
                           _AppInput(
                             controller: _titleCtrl,
                             hint: 'e.g. Chapter 3 — Laws of Motion',
-                            icon: Icons.title_rounded,
+                            icon: Icons.text_fields_rounded,
                             validator: (v) => (v == null || v.trim().isEmpty)
                                 ? 'Enter a title'
                                 : null,
@@ -304,7 +304,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
                           _AppInput(
                             controller: _subjectCtrl,
                             hint: 'e.g. Physics',
-                            icon: Icons.menu_book_rounded,
+                            icon: Icons.book_outlined,
                             validator: (v) => (v == null || v.trim().isEmpty)
                                 ? 'Enter a subject'
                                 : null,
@@ -425,18 +425,17 @@ class _AppInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 52,
       decoration: BoxDecoration(
         color: _bgCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _border),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 17, 0, 0),
-            child: Icon(icon, color: _fm, size: 18),
-          ),
+          const SizedBox(width: 16),
+          Icon(icon, color: _fm, size: 18),
           Expanded(
             child: TextFormField(
               controller: controller,
@@ -447,8 +446,9 @@ class _AppInput extends StatelessWidget {
                 hintText: hint,
                 hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.fromLTRB(12, 15, 12, 15),
+                contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
                 errorStyle: GoogleFonts.inter(color: _danger, fontSize: 11),
+                isDense: true,
               ),
             ),
           ),
@@ -742,7 +742,7 @@ class _DescField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80,
+      height: 100,
       decoration: BoxDecoration(
         color: _bgCard,
         borderRadius: BorderRadius.circular(12),
@@ -758,14 +758,14 @@ class _DescField extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              maxLines: null,
-              expands: true,
-              style: GoogleFonts.inter(color: _fp, fontSize: 14, height: 1.5),
+              maxLines: 3,
+              style: GoogleFonts.inter(color: _fp, fontSize: 14, height: 1.4),
               decoration: InputDecoration(
                 hintText: 'Add context for your students...',
                 hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.fromLTRB(12, 13, 12, 13),
+                contentPadding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+                isDense: true,
               ),
             ),
           ),
@@ -785,7 +785,7 @@ class _UploadZone extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 128,
+      height: 140,
       decoration: BoxDecoration(
         color: _bgCard,
         borderRadius: BorderRadius.circular(12),
@@ -805,54 +805,78 @@ class _UploadZone extends StatelessWidget {
                 ],
               ),
             )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+          : Stack(
               children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: _primary.withValues(alpha: 0.094),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.cloud_rounded,
-                    color: _primary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Drag & drop or browse',
-                  style: GoogleFonts.inter(
-                    color: _fp,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'PDF · DOC · MP4 · Max 20MB',
-                  style: GoogleFonts.inter(color: _fm, fontSize: 11),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: onBrowse,
-                  child: Container(
-                    width: 120,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: _bgCard2,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _border),
+                // Cloud icon at top
+                Positioned(
+                  top: 14,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        color: _primary.withValues(alpha: 0.094),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.cloud_rounded,
+                        color: _primary,
+                        size: 22,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Browse Files',
-                      style: GoogleFonts.inter(
-                        color: _fs,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                  ),
+                ),
+                // Text in middle
+                Positioned(
+                  top: 70,
+                  left: 0,
+                  right: 0,
+                  child: Text(
+                    'Drag & drop or browse',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      color: _fp,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 90,
+                  left: 0,
+                  right: 0,
+                  child: Text(
+                    'PDF · DOC · MP4 · Max 20MB',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(color: _fm, fontSize: 11),
+                  ),
+                ),
+                // Browse button at bottom
+                Positioned(
+                  bottom: 14,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: onBrowse,
+                      child: Container(
+                        width: 120,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: _bgCard2,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _border),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Browse Files',
+                          style: GoogleFonts.inter(
+                            color: _fs,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ),
