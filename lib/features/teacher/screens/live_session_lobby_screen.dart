@@ -53,16 +53,31 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen>
   }
 
   Future<void> _createSession() async {
-    final user = context.read<AppState>().currentUser!;
-    final session = await _svc.startSession(
-      test: widget.test,
-      hostId: user.id,
-      hostName: user.name,
-    );
-    if (!mounted) return;
-    setState(() { _session = session; _creating = false; });
-    _listenSession(session.id);
-    _listenParticipants(session.id);
+    try {
+      final user = context.read<AppState>().currentUser!;
+      final session = await _svc.startSession(
+        test: widget.test,
+        hostId: user.id,
+        hostName: user.name,
+      );
+      if (!mounted) return;
+      setState(() { _session = session; _creating = false; });
+      _listenSession(session.id);
+      _listenParticipants(session.id);
+    } catch (e) {
+      if (!mounted) return;
+      // Show error and go back — don't leave user stuck on spinner
+      final msg = e.toString().replaceAll('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg,
+            style: GoogleFonts.poppins(color: Colors.white)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      Navigator.pop(context);
+    }
   }
 
   void _listenSession(String id) {

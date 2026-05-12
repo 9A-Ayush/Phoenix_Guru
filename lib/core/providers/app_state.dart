@@ -298,6 +298,20 @@ class AppState extends ChangeNotifier {
         return null;
       }
 
+      // Rate limit by Google email — 4 sign-in/sign-out cycles per hour
+      final rl = RateLimiter.instance;
+      final blocked = rl.check(
+        'google_signin:${googleUser.email}',
+        maxAttempts: 4,
+        window: const Duration(hours: 1),
+        blockDuration: const Duration(hours: 1),
+      );
+      if (blocked != null) {
+        await _googleSignIn.signOut();
+        _isLoading = false; notifyListeners();
+        return blocked;
+      }
+
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -369,6 +383,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     _cancelStreams();
+    // Reset Google sign-in rate limit for this user on clean logout
+    if (_currentUser != null) {
+      RateLimiter.instance.reset('google_signin:${_currentUser!.email}');
+    }
     _currentUser = null;
     _authStatus = AuthStatus.unauthenticated;
     _classes.clear();
