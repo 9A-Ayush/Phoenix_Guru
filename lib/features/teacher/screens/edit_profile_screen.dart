@@ -84,7 +84,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
 
-        SafeArea(
+        Padding(
+          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
           child: Form(
             key: _formKey,
             child: SingleChildScrollView(

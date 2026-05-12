@@ -197,8 +197,7 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: StreamBuilder<List<LiveSession>>(
+      body: StreamBuilder<List<LiveSession>>(
           stream: stream,
           builder: (context, snapshot) {
             final sessions = snapshot.data ?? [];
@@ -207,7 +206,7 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
               // ── Header — matches class_detail_screen style ───────────
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 16),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF1C1240), AppColors.bg],
@@ -490,7 +489,6 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
             ]);
           },
         ),
-      ),
     );
   }
 }

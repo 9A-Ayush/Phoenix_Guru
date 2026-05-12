@@ -1349,17 +1349,15 @@ class TeacherProfilePage extends StatelessWidget {
     final classes = state.myClasses;
     final tests = state.allTests;
 
-    return SafeArea(
-      bottom: false,
-      child: SingleChildScrollView(
+    return SingleChildScrollView(
         child: Column(children: [
           Container(
-            height: 240,
+            height: 240 + MediaQuery.of(context).padding.top,
             width: double.infinity,
             decoration: const BoxDecoration(gradient: LinearGradient(
                 colors: [Color(0xFF1C1240), AppColors.bg], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const SizedBox(height: 40),
+              SizedBox(height: 40 + MediaQuery.of(context).padding.top),
               Stack(
                 alignment: Alignment.bottomCenter,
                 clipBehavior: Clip.none,
@@ -1451,7 +1449,6 @@ class TeacherProfilePage extends StatelessWidget {
             const SizedBox(height: 16),
           ])),
         ]),
-      ),
     );
   }
 

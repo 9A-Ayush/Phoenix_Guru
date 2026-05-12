@@ -196,12 +196,11 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen>
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
+      body: Column(children: [
           // ── Header ──────────────────────────────────────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 16),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF1C1240), AppColors.bg],
@@ -488,7 +487,6 @@ class _LiveSessionLobbyScreenState extends State<LiveSessionLobbyScreen>
             ),
           ),
         ]),
-      ),
     );
   }
 }

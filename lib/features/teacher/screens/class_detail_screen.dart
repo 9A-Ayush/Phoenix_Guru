@@ -169,15 +169,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
         return Scaffold(
           backgroundColor: AppColors.bg,
-          body: SafeArea(
-            child: Column(children: [
+          body: Column(children: [
               // ── Header ──────────────────────────────────────────────────
               ValueListenableBuilder<bool>(
                 valueListenable: _selectionMode,
                 builder: (context, inSelection, _) {
                   return Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                    padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 12, 24, 16),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Color(0xFF1C1240), AppColors.bg],
@@ -377,7 +376,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ),
               ),
             ]),
-          ),
         );
       },
     );
@@ -887,8 +885,9 @@ class _TestsTab extends StatelessWidget {
     final tests = context.watch<AppState>().testsForClass(cls.id);
 
     if (tests.isEmpty) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
           const Icon(Symbols.assignment, color: AppColors.textMuted, size: 52),
           const SizedBox(height: 12),
           Text('No tests yet',
@@ -900,26 +899,40 @@ class _TestsTab extends StatelessWidget {
           Text('Create a test and assign it to this class',
               style: GoogleFonts.poppins(
                   color: AppColors.textMuted, fontSize: 13)),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const CreateTestScreen())),
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CreateTestScreen())),
+              child: Container(
+                height: 54,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Symbols.add, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Create Test',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700)),
+                ]),
               ),
-              alignment: Alignment.center,
-              child: Text('Create Test',
-                  style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600)),
             ),
           ),
-        ]),
+        ],
       );
     }
 
@@ -1016,31 +1029,45 @@ class _MaterialTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
         const Icon(Symbols.folder_open, color: AppColors.textMuted, size: 52),
         const SizedBox(height: 12),
         Text('No materials yet', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         Text('Upload study materials for your students', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 13)),
-        const SizedBox(height: 20),
-        GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(
-            builder: (_) => MaterialUploadScreen(preselectedClass: cls),
-          )),
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
-            alignment: Alignment.center,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Symbols.upload, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text('Upload Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-            ]),
+        const SizedBox(height: 32),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => MaterialUploadScreen(preselectedClass: cls),
+            )),
+            child: Container(
+              height: 54,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Symbols.upload, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text('Upload Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              ]),
+            ),
           ),
         ),
-      ]),
+      ],
     );
   }
 }

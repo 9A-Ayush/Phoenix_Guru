@@ -37,8 +37,7 @@ class _TestPicker extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
+      body: Column(children: [
           _Header(title: 'Test Results', subtitle: '${tests.length} tests'),
           Expanded(
             child: tests.isEmpty
@@ -140,7 +139,6 @@ class _TestPicker extends StatelessWidget {
                   ),
           ),
         ]),
-      ),
     );
   }
 }
@@ -197,8 +195,7 @@ class _TestResultDetail extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
+      body: Column(children: [
           _Header(
             title: test.title,
             subtitle: '${attempts.length} students attempted',
@@ -584,7 +581,6 @@ class _TestResultDetail extends StatelessWidget {
                   ),
           ),
         ]),
-      ),
     );
   }
 }
@@ -608,7 +604,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 16),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1C1240), AppColors.bg],

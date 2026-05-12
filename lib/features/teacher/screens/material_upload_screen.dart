@@ -205,7 +205,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
 
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.poppins(color: Colors.white)),
+      content: Text(msg, style: GoogleFonts.inter(color: Colors.white)),
       backgroundColor: isError ? _danger : _green,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -219,173 +219,188 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      body: SafeArea(
-        child: Stack(
+      body: Column(
           children: [
-            // scrollable form
-            SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 100),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 14),
-                    _backButton(context),
-                    const SizedBox(height: 24),
-                    _pageHeader(),
-                    const SizedBox(height: 32),
-
-                    // ── Title ───────────────────────────────────────────────
-                    _fieldLabel('Title'),
-                    const SizedBox(height: 8),
-                    _AppInput(
-                      controller: _titleCtrl,
-                      hint: 'e.g. Chapter 3 — Laws of Motion',
-                      icon: Icons.title_rounded,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter a title' : null,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Subject ─────────────────────────────────────────────
-                    _fieldLabel('Subject'),
-                    const SizedBox(height: 8),
-                    _AppInput(
-                      controller: _subjectCtrl,
-                      hint: 'e.g. Physics',
-                      icon: Icons.menu_book_rounded,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter a subject' : null,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Assign to Class ─────────────────────────────────────
-                    _fieldLabel('Assign to Class'),
-                    const SizedBox(height: 8),
-                    _ClassField(
-                      selected: _selectedClass,
-                      onTap: _showClassPicker,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Material Type ───────────────────────────────────────
-                    _fieldLabel('Material Type'),
-                    const SizedBox(height: 8),
-                    _TypeChips(
-                      selected: _selectedType,
-                      onSelect: (t) => setState(() {
-                        _selectedType = t;
-                        // clear file if type changed
-                        _removeFile();
-                      }),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Description ─────────────────────────────────────────
-                    _fieldLabel('Description (optional)'),
-                    const SizedBox(height: 8),
-                    _DescField(controller: _descCtrl),
-                    const SizedBox(height: 20),
-
-                    // ── Attach File ─────────────────────────────────────────
-                    _fieldLabel('Attach File'),
-                    const SizedBox(height: 8),
-                    _pickedFile != null
-                        ? _FilePreviewCard(
-                            name: _pickedFileName!,
-                            size: _pickedFileSize!,
-                            onRemove: _removeFile,
-                          )
-                        : _UploadZone(
-                            isLink: _selectedType == MaterialType.link,
-                            onBrowse: _pickFile,
+            // ── Header (flat bg, matches Pencil design) ────────────────────
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 20, 24, 20),
+              color: _bg,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Back button (plain row with chevron + text)
+                  GestureDetector(
+                    onTap: () => Navigator.maybePop(context),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.chevron_left_rounded,
+                          color: _fs,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Back',
+                          style: GoogleFonts.inter(
+                            color: _fs,
+                            fontSize: 14,
+                            fontWeight: FontWeight.normal,
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Upload Material',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Share resources with your students',
+                    style: GoogleFonts.inter(
+                      color: _fm,
+                      fontSize: 13,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-                    // upload progress bar
-                    if (_isUploading) ...[
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+            // ── Scrollable form ─────────────────────────────────────────────
+            Expanded(
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Title ──────────────────────────────────────────
+                          _fieldLabel('Title'),
+                          const SizedBox(height: 8),
+                          _AppInput(
+                            controller: _titleCtrl,
+                            hint: 'e.g. Chapter 3 — Laws of Motion',
+                            icon: Icons.title_rounded,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter a title'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── Subject ────────────────────────────────────────
+                          _fieldLabel('Subject'),
+                          const SizedBox(height: 8),
+                          _AppInput(
+                            controller: _subjectCtrl,
+                            hint: 'e.g. Physics',
+                            icon: Icons.menu_book_rounded,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter a subject'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── Assign to Class ────────────────────────────────
+                          _fieldLabel('Assign to Class'),
+                          const SizedBox(height: 8),
+                          _ClassField(
+                            selected: _selectedClass,
+                            onTap: _showClassPicker,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── Material Type ──────────────────────────────────
+                          _fieldLabel('Material Type'),
+                          const SizedBox(height: 8),
+                          _TypeChips(
+                            selected: _selectedType,
+                            onSelect: (t) => setState(() {
+                              _selectedType = t;
+                              _removeFile();
+                            }),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── Description ────────────────────────────────────
+                          _fieldLabel('Description (optional)'),
+                          const SizedBox(height: 8),
+                          _DescField(controller: _descCtrl),
+                          const SizedBox(height: 16),
+
+                          // ── Attach File ────────────────────────────────────
+                          _fieldLabel('Attach File'),
+                          const SizedBox(height: 8),
+                          _pickedFile != null
+                              ? _FilePreviewCard(
+                                  name: _pickedFileName!,
+                                  size: _pickedFileSize!,
+                                  onRemove: _removeFile,
+                                )
+                              : _UploadZone(
+                                  isLink: _selectedType == MaterialType.link,
+                                  onBrowse: _pickFile,
+                                ),
+
+                          // ── Upload progress ────────────────────────────────
+                          if (_isUploading) ...[
+                            const SizedBox(height: 16),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(
                                 value: _uploadProgress,
                                 minHeight: 4,
                                 backgroundColor: _bgCard2,
-                                valueColor: const AlwaysStoppedAnimation(_primary),
+                                valueColor:
+                                    const AlwaysStoppedAnimation(_primary),
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               'Uploading... ${(_uploadProgress * 100).toInt()}%',
-                              style: GoogleFonts.poppins(color: _fm, fontSize: 11),
+                              style:
+                                  GoogleFonts.inter(color: _fm, fontSize: 11),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+                    ),
+                  ),
 
-            // ── Sticky bottom button ────────────────────────────────────────
-            Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: _BottomBar(
-                isLoading: _isUploading,
-                onTap: _isUploading ? null : _submit,
+                  // ── Sticky bottom button ──────────────────────────────────
+                  Positioned(
+                    left: 0, right: 0, bottom: 0,
+                    child: _BottomBar(
+                      isLoading: _isUploading,
+                      onTap: _isUploading ? null : _submit,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
       ),
     );
   }
 
-  // ── Small helpers ──────────────────────────────────────────────────────────
-  Widget _backButton(BuildContext context) => GestureDetector(
-        onTap: () => Navigator.maybePop(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.chevron_left_rounded, color: _fs, size: 20),
-              const SizedBox(width: 4),
-              Text('Back', style: GoogleFonts.poppins(color: _fs, fontSize: 14)),
-            ],
-          ),
-        ),
-      );
-
-  Widget _pageHeader() => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Upload Material',
-              style: GoogleFonts.poppins(
-                color: _fp, fontSize: 26, fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Share resources with your students',
-              style: GoogleFonts.poppins(color: _fm, fontSize: 13),
-            ),
-          ],
-        ),
-      );
-
   Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Text(text, style: GoogleFonts.poppins(color: _fs, fontSize: 13)),
+        padding: const EdgeInsets.only(bottom: 0),
+        child: Text(text,
+            style: GoogleFonts.inter(
+              color: _fs,
+              fontSize: 13,
+              fontWeight: FontWeight.normal,
+            )),
       );
 }
 
@@ -409,38 +424,35 @@ class _AppInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: _bgCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _border),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 17, 0, 0),
-              child: Icon(icon, color: _fm, size: 18),
-            ),
-            Expanded(
-              child: TextFormField(
-                controller: controller,
-                validator: validator,
-                maxLines: 1,
-                style: GoogleFonts.poppins(color: _fp, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: hint,
-                  hintStyle: GoogleFonts.poppins(color: _fm, fontSize: 14),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.fromLTRB(12, 15, 12, 15),
-                  errorStyle: GoogleFonts.poppins(color: _danger, fontSize: 11),
-                ),
+    return Container(
+      decoration: BoxDecoration(
+        color: _bgCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 17, 0, 0),
+            child: Icon(icon, color: _fm, size: 18),
+          ),
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              validator: validator,
+              maxLines: 1,
+              style: GoogleFonts.inter(color: _fp, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.fromLTRB(12, 15, 12, 15),
+                errorStyle: GoogleFonts.inter(color: _danger, fontSize: 11),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -457,66 +469,63 @@ class _ClassField extends StatelessWidget {
   Widget build(BuildContext context) {
     final filled = selected != null;
     final displayText = filled ? '${selected!.name} — ${selected!.subject}' : 'Select a class';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 52,
-          decoration: BoxDecoration(
-            color: _bgCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: filled ? _primary : _border,
-              width: filled ? 1.5 : 1,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 52,
+        decoration: BoxDecoration(
+          color: _bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: filled ? _primary : _border,
+            width: filled ? 1.5 : 1,
+          ),
+          boxShadow: filled
+              ? [BoxShadow(color: _primary.withValues(alpha: 0.12), blurRadius: 10)]
+              : [],
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            Icon(
+              Icons.groups_rounded,
+              color: filled ? _primary : _fm,
+              size: 18,
             ),
-            boxShadow: filled
-                ? [BoxShadow(color: _primary.withValues(alpha: 0.12), blurRadius: 10)]
-                : [],
-          ),
-          child: Row(
-            children: [
-              const SizedBox(width: 16),
-              Icon(
-                Icons.groups_rounded,
-                color: filled ? _primary : _fm,
-                size: 18,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                displayText,
+                style: GoogleFonts.inter(
+                  color: filled ? _fp : _fm,
+                  fontSize: 14,
+                  fontWeight: filled ? FontWeight.w500 : FontWeight.normal,
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+            ),
+            if (filled)
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: Text(
-                  displayText,
-                  style: GoogleFonts.poppins(
-                    color: filled ? _fp : _fm,
-                    fontSize: 14,
-                    fontWeight: filled ? FontWeight.w500 : FontWeight.normal,
+                  'Selected',
+                  style: GoogleFonts.inter(
+                    color: _primary, fontSize: 10, fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              if (filled)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Selected',
-                    style: GoogleFonts.poppins(
-                      color: _primary, fontSize: 10, fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: filled ? _primary : _fm,
-                size: 18,
-              ),
-              const SizedBox(width: 12),
-            ],
-          ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: filled ? _primary : _fm,
+              size: 18,
+            ),
+            const SizedBox(width: 12),
+          ],
         ),
       ),
     );
@@ -560,14 +569,14 @@ class _ClassPickerSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Assign to Class',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 color: _fp, fontSize: 18, fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Material will be visible to students in this class',
-              style: GoogleFonts.poppins(color: _fm, fontSize: 12),
+              style: GoogleFonts.inter(color: _fm, fontSize: 12),
             ),
             const SizedBox(height: 16),
             if (classes.isEmpty)
@@ -575,7 +584,7 @@ class _ClassPickerSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'No classes found. Create a class first.',
-                  style: GoogleFonts.poppins(color: _fm, fontSize: 13),
+                  style: GoogleFonts.inter(color: _fm, fontSize: 13),
                 ),
               ),
             ...classes.map((c) {
@@ -627,7 +636,7 @@ class _ClassPickerSheet extends StatelessWidget {
                           children: [
                             Text(
                               c.name,
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.inter(
                                 color: _fp,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -636,7 +645,7 @@ class _ClassPickerSheet extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               '${c.subject} · ${c.studentCount} student${c.studentCount == 1 ? '' : 's'}',
-                              style: GoogleFonts.poppins(color: _fm, fontSize: 12),
+                              style: GoogleFonts.inter(color: _fm, fontSize: 12),
                             ),
                           ],
                         ),
@@ -682,48 +691,45 @@ class _TypeChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Wrap(
-        spacing: 8,
-        children: MaterialType.values.map((t) {
-          final active = t == selected;
-          return GestureDetector(
-            onTap: () => onSelect(t),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: active ? _primary : _bgCard,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: active ? _primary : _border,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    t.icon,
-                    size: 14,
-                    color: active ? Colors.white : _fs,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    t.label,
-                    style: GoogleFonts.poppins(
-                      color: active ? Colors.white : _fs,
-                      fontSize: 12,
-                      fontWeight:
-                          active ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ],
+    return Wrap(
+      spacing: 8,
+      children: MaterialType.values.map((t) {
+        final active = t == selected;
+        return GestureDetector(
+          onTap: () => onSelect(t),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: active ? _primary : _bgCard,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: active ? _primary : _border,
               ),
             ),
-          );
-        }).toList(),
-      ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  t.icon,
+                  size: 14,
+                  color: active ? Colors.white : _fs,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  t.label,
+                  style: GoogleFonts.inter(
+                    color: active ? Colors.white : _fs,
+                    fontSize: 12,
+                    fontWeight:
+                        active ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -735,36 +741,35 @@ class _DescField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: _bgCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _border),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 0, 0),
-              child: Icon(Icons.list_rounded, color: _fm, size: 16),
-            ),
-            Expanded(
-              child: TextField(
-                controller: controller,
-                maxLines: 4,
-                style: GoogleFonts.poppins(color: _fp, fontSize: 14, height: 1.5),
-                decoration: InputDecoration(
-                  hintText: 'Add context for your students...',
-                  hintStyle: GoogleFonts.poppins(color: _fm, fontSize: 14),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.fromLTRB(12, 13, 12, 13),
-                ),
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: _bgCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 0, 0),
+            child: Icon(Icons.list_rounded, color: _fm, size: 16),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              maxLines: null,
+              expands: true,
+              style: GoogleFonts.inter(color: _fp, fontSize: 14, height: 1.5),
+              decoration: InputDecoration(
+                hintText: 'Add context for your students...',
+                hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.fromLTRB(12, 13, 12, 13),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -779,84 +784,81 @@ class _UploadZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        height: 128,
-        decoration: BoxDecoration(
-          color: _bgCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _border),
-        ),
-        child: isLink
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.link_rounded, color: _fm, size: 28),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Paste the link in the description above',
-                      style: GoogleFonts.poppins(color: _fm, fontSize: 12),
-                    ),
-                  ],
-                ),
-              )
-            : Column(
+    return Container(
+      height: 128,
+      decoration: BoxDecoration(
+        color: _bgCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+      ),
+      child: isLink
+          ? Center(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: _primary.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.cloud_upload_outlined,
-                      color: _primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Drag & drop or browse',
-                    style: GoogleFonts.poppins(
-                      color: _fp,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'PDF · DOC · JPG · Max 20MB',
-                    style: GoogleFonts.poppins(color: _fm, fontSize: 11),
-                  ),
+                  const Icon(Icons.link_rounded, color: _fm, size: 28),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: onBrowse,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _bgCard2,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _border),
-                      ),
-                      child: Text(
-                        'Browse Files',
-                        style: GoogleFonts.poppins(
-                          color: _fs,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
+                  Text(
+                    'Paste the link in the description above',
+                    style: GoogleFonts.inter(color: _fm, fontSize: 12),
                   ),
                 ],
               ),
-      ),
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: _primary.withValues(alpha: 0.094),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.cloud_rounded,
+                    color: _primary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Drag & drop or browse',
+                  style: GoogleFonts.inter(
+                    color: _fp,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'PDF · DOC · MP4 · Max 20MB',
+                  style: GoogleFonts.inter(color: _fm, fontSize: 11),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onBrowse,
+                  child: Container(
+                    width: 120,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: _bgCard2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _border),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Browse Files',
+                      style: GoogleFonts.inter(
+                        color: _fs,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -875,65 +877,62 @@ class _FilePreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        height: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0A1F0D),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _green),
-        ),
-        child: Row(
-          children: [
-            // file icon
-            Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                color: _danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: const Icon(
-                Icons.picture_as_pdf_rounded,
-                color: _danger,
-                size: 18,
-              ),
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1F0D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _green),
+      ),
+      child: Row(
+        children: [
+          // file icon
+          Container(
+            width: 38, height: 38,
+            decoration: BoxDecoration(
+              color: _danger.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(9),
             ),
-            const SizedBox(width: 12),
-            // info
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      color: _fp,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: const Icon(
+              Icons.picture_as_pdf_rounded,
+              color: _danger,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // info
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: _fp,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$size · Ready to upload',
-                    style: GoogleFonts.poppins(color: _green, fontSize: 11),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$size · Ready to upload',
+                  style: GoogleFonts.inter(color: _green, fontSize: 11),
+                ),
+              ],
             ),
-            // remove
-            GestureDetector(
-              onTap: onRemove,
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.close_rounded, color: _fm, size: 18),
-              ),
+          ),
+          // remove
+          GestureDetector(
+            onTap: onRemove,
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.close_rounded, color: _fm, size: 18),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -992,18 +991,19 @@ class _BottomBar extends StatelessWidget {
                     strokeWidth: 2,
                     color: Colors.white,
                   ),
-                )
-              else
-                const Icon(Icons.upload_rounded, color: Colors.white, size: 18),
-              const SizedBox(width: 10),
+                ),
               Text(
                 isLoading ? 'Uploading...' : 'Upload Material',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (!isLoading) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.upload_rounded, color: Colors.white, size: 18),
+              ],
             ],
           ),
         ),
