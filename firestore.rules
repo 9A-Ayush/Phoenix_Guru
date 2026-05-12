@@ -35,8 +35,16 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null
-                             && resource.data.userId == request.auth.uid;
+      // Student can update/delete their own attempt.
+      // Teacher can delete any attempt (needed when deleting a test + its attempts).
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null
+                    && (
+                      resource.data.userId == request.auth.uid
+                      ||
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                    );
     }
 
     // ── Live Sessions ───────────────────────────────────────────────────────
