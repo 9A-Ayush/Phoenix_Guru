@@ -48,6 +48,7 @@ lib/
             ├── create_quiz_screen.dart    # Lightweight live quiz builder (no class/expiry)
             ├── edit_test_screen.dart
             ├── class_detail_screen.dart   # Real-time students/tests tabs, multi-select remove
+            ├── active_sessions_screen.dart    # Active sessions list, multi-select, close
             ├── live_session_lobby_screen.dart # PIN + QR display, participant grid
             ├── live_quiz_host_screen.dart # Real-time answer distribution
             ├── test_results_screen.dart
@@ -96,9 +97,10 @@ All rate limits are client-side (in-memory, resets on app restart). Server-side 
 ### Both Roles
 | Action | Limit | Block Duration |
 |---|---|---|
-| Login | 3 fails / 10 min | 30 min |
+| Login (email) | 3 fails / 10 min | 30 min |
 | Sign Up | 2 / 1 hr | 1 hr |
 | Forgot Password | 2 / 1 hr | 1 hr |
+| Google Sign-In | 4 / 1 hr per email | 1 hr |
 | Update Profile | 2 / 1 hr | 1 hr |
 | Change Password | 2 / 1 hr | 1 hr |
 | Join Class | 3 / 5 min | 15 min |
@@ -279,7 +281,13 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | T09 | Create Quiz | Lightweight live quiz builder (max 30 Qs) |
 | T10 | Edit Test | Edit name, questions, expiry |
 | T11 | Live Session Lobby | PIN + QR, participant grid, lock room |
-| T12 | Live Quiz Host | Real-time answer distribution |
+| T12 | Active Sessions | All active sessions, multi-select close, long-press single close |
+| T13 | Live Quiz Host | Real-time answer distribution |
+| T14 | Test Results | Live Firestore scores, grade bars, flagged questions |
+| T15 | Edit Profile | Name edit → Firestore |
+| T16 | Change Password | Re-auth + Firebase Auth update |
+| T17 | Notifications | 5 toggles → Firestore (3s debounce) |
+| T18 | Help & Support | FAQ accordion + contact cards |
 | T13 | Test Results | Live Firestore scores, flagged questions |
 | T14 | Edit Profile | Name edit → Firestore |
 | T15 | Change Password | Re-auth + Firebase Auth update |
@@ -300,7 +308,12 @@ flutter pub get
 flutter run
 ```
 
-### Firebase Setup
+### Security Notes
+- `google-services.json` and `GoogleService-Info.plist` are **gitignored** — never commit to public repo
+- Firebase API keys in those files are restricted by SHA-1 + package name — safe for mobile
+- `.env` file with `GOOGLE_API_KEY` is gitignored
+- All rate limits are client-side (in-memory) — resets on app restart
+- Server-side enforcement via Firestore security rules (deployed)
 1. Create project at [console.firebase.google.com](https://console.firebase.google.com)
 2. Enable **Authentication** → Email/Password + Google
 3. Enable **Firestore Database** (production mode)
@@ -340,6 +353,13 @@ firebase deploy --only firestore --project <your-project-id>
 ### Live Quiz — Teacher
 ```
 TeacherQuizPage
+  ├── "Sessions" button (top-right, shows active count badge)
+  │     → ActiveSessionsScreen
+  │           - Tap session → LiveSessionLobbyScreen (rejoin existing)
+  │           - Long press → single close bottom sheet
+  │           - Tap to enter selection mode → multi-select
+  │           - "Close (N)" button top-right → ends selected sessions
+  │
   ├── Create New Quiz → CreateQuizScreen (title + timer + questions, max 30)
   │     → LiveSessionLobbyScreen (PIN + QR + participant grid)
   │     → TeacherLiveQuizScreen (real-time answer distribution)

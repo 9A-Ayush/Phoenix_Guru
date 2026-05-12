@@ -10,6 +10,7 @@ import '../../../core/providers/app_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'create_test_screen.dart';
 import 'test_results_screen.dart';
+import 'material_upload_screen.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final ClassModel cls;
@@ -371,7 +372,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       selectedIds: _selectedIds,
                     ),
                     _TestsTab(cls: cls),
-                    const _MaterialTab(),
+                    _MaterialTab(cls: cls),
                   ],
                 ),
               ),
@@ -1010,24 +1011,35 @@ class _TestsTab extends StatelessWidget {
 // ── Material Tab ──────────────────────────────────────────────────────────────
 
 class _MaterialTab extends StatelessWidget {
-  const _MaterialTab();
+  final ClassModel cls;
+  const _MaterialTab({required this.cls});
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Symbols.folder_open,
-            color: AppColors.textMuted, size: 52),
+        const Icon(Symbols.folder_open, color: AppColors.textMuted, size: 52),
         const SizedBox(height: 12),
-        Text('No materials yet',
-            style: GoogleFonts.poppins(
-                color: AppColors.textSecondary,
-                fontSize: 16,
-                fontWeight: FontWeight.w600)),
+        Text('No materials yet', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text('Upload study materials for your students',
-            style: GoogleFonts.poppins(
-                color: AppColors.textMuted, fontSize: 13)),
+        Text('Upload study materials for your students', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 13)),
+        const SizedBox(height: 20),
+        GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(
+            builder: (_) => MaterialUploadScreen(preselectedClass: cls),
+          )),
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
+            alignment: Alignment.center,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Symbols.upload, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text('Upload Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ),
       ]),
     );
   }
