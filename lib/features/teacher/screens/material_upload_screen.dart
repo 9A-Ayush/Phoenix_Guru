@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models.dart';
 import '../../../core/providers/app_state.dart';
+import '../../../core/services/cloudinary_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME ALIASES  (maps old local constants → AppColors)
@@ -52,18 +53,7 @@ class MaterialUploadScreen extends StatefulWidget {
   /// Optional pre-selected class (e.g. when opened from ClassDetailScreen).
   final ClassModel? preselectedClass;
 
-  /// Called with (classId, file, type, title, subject, description)
-  /// when teacher taps Upload Material.
-  final Future<void> Function({
-    required String classId,
-    required File? file,
-    required MaterialType type,
-    required String title,
-    required String subject,
-    required String description,
-  })? onUpload;
-
-  const MaterialUploadScreen({super.key, this.preselectedClass, this.onUpload});
+  const MaterialUploadScreen({super.key, this.preselectedClass});
 
   @override
   State<MaterialUploadScreen> createState() => _MaterialUploadScreenState();
@@ -170,32 +160,37 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
 
     setState(() { _isUploading = true; _uploadProgress = 0; });
 
-    // Simulate progress while real upload runs
-    final ticker = Stream.periodic(
-      const Duration(milliseconds: 80),
-      (i) => (i + 1) / 60,
-    ).take(59).listen((v) {
-      if (mounted) setState(() => _uploadProgress = v.clamp(0.0, 0.95));
-    });
-
     try {
-      await widget.onUpload?.call(
-        classId:     _selectedClass!.id,
-        file:        _pickedFile,
-        type:        _selectedType,
-        title:       _titleCtrl.text.trim(),
-        subject:     _subjectCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
+      final appState = context.read<AppState>();
+      final cloudinary = CloudinaryService();
+      final teacherId = appState.currentUser!.id;
+
+      // Upload to Cloudinary
+      final result = await cloudinary.uploadFile(
+        file: _pickedFile!,
+        fileName: _pickedFileName!,
+        teacherId: teacherId,
+        onProgress: (progress) {
+          if (mounted) setState(() => _uploadProgress = progress);
+        },
       );
-      ticker.cancel();
-      if (mounted) setState(() => _uploadProgress = 1.0);
-      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Save to Firestore
+      await cloudinary.saveMaterial(
+        classId: _selectedClass!.id,
+        name: _titleCtrl.text.trim(),
+        subject: _subjectCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
+        type: _selectedType.label.toLowerCase(),
+        cloudinaryResult: result,
+        uploadedBy: teacherId,
+      );
+
       if (mounted) {
         _showSnack('Material uploaded successfully!');
         Navigator.maybePop(context);
       }
     } catch (e) {
-      ticker.cancel();
       if (mounted) {
         setState(() { _isUploading = false; _uploadProgress = 0; });
         _showSnack(e.toString(), isError: true);

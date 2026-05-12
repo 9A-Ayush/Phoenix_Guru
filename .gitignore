@@ -72,3 +72,8 @@ FUTURE_CLOUDINARY_MEDIA_UPLOAD.md
 # Firebase config files — contain API keys, keep local only
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+
+# Firebase Functions
+functions/node_modules/
+functions/.runtimeconfig.json
+functions/package-lock.json
