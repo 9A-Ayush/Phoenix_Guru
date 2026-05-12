@@ -399,14 +399,12 @@ class _AppInput extends StatelessWidget {
   final String hint;
   final IconData icon;
   final String? Function(String?)? validator;
-  final int maxLines;
 
   const _AppInput({
     required this.controller,
     required this.hint,
     required this.icon,
     this.validator,
-    this.maxLines = 1,
   });
 
   @override
@@ -430,7 +428,7 @@ class _AppInput extends StatelessWidget {
               child: TextFormField(
                 controller: controller,
                 validator: validator,
-                maxLines: maxLines,
+                maxLines: 1,
                 style: GoogleFonts.poppins(color: _fp, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: hint,
