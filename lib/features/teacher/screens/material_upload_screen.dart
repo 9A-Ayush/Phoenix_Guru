@@ -31,7 +31,7 @@ extension MaterialTypeX on MaterialType {
   String get label => ['PDF', 'Image', 'Doc', 'Link'][index];
   IconData get icon => [
         Icons.picture_as_pdf_rounded,
-        Icons.videocam_rounded,
+        Icons.image_rounded,
         Icons.description_rounded,
         Icons.link_rounded,
       ][index];
@@ -424,35 +424,40 @@ class _AppInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: _bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(width: 16),
-          Icon(icon, color: _fm, size: 18),
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              validator: validator,
-              maxLines: 1,
-              style: GoogleFonts.inter(color: _fp, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                errorStyle: GoogleFonts.inter(color: _danger, fontSize: 11),
-                isDense: true,
-              ),
-            ),
-          ),
-        ],
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      maxLines: 1,
+      style: GoogleFonts.inter(color: _fp, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
+        prefixIcon: Icon(icon, color: _fm, size: 18),
+        filled: true,
+        fillColor: _bgCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border, width: 1),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _danger, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _danger, width: 1),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        errorStyle: GoogleFonts.inter(color: _danger, fontSize: 11),
+        isDense: true,
       ),
     );
   }
@@ -735,42 +740,88 @@ class _TypeChips extends StatelessWidget {
 }
 
 // ── Description textarea ───────────────────────────────────────────────────────
-class _DescField extends StatelessWidget {
+class _DescField extends StatefulWidget {
   final TextEditingController controller;
   const _DescField({required this.controller});
 
   @override
+  State<_DescField> createState() => _DescFieldState();
+}
+
+class _DescFieldState extends State<_DescField> {
+  int _charCount = 0;
+  static const int _maxChars = 200;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_updateCharCount);
+    _charCount = widget.controller.text.length;
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_updateCharCount);
+    super.dispose();
+  }
+
+  void _updateCharCount() {
+    setState(() {
+      _charCount = widget.controller.text.length;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: _bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 0, 0),
-            child: Icon(Icons.list_rounded, color: _fm, size: 16),
+    return Stack(
+      children: [
+        TextField(
+          controller: widget.controller,
+          minLines: 1,
+          maxLines: 3,
+          maxLength: _maxChars,
+          style: GoogleFonts.inter(color: _fp, fontSize: 14, height: 1.4),
+          decoration: InputDecoration(
+            hintText: 'Add context for your students...',
+            hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
+            filled: true,
+            fillColor: _bgCard,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _border, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _border, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _border, width: 1),
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(48, 14, 70, 14),
+            isDense: true,
+            counterText: '',
           ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              maxLines: 3,
-              style: GoogleFonts.inter(color: _fp, fontSize: 14, height: 1.4),
-              decoration: InputDecoration(
-                hintText: 'Add context for your students...',
-                hintStyle: GoogleFonts.inter(color: _fm, fontSize: 14),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-                isDense: true,
-              ),
+        ),
+        // Icon positioned on the left
+        const Positioned(
+          left: 16,
+          top: 14,
+          child: Icon(Icons.list_rounded, color: _fm, size: 16),
+        ),
+        // Counter positioned on the right
+        Positioned(
+          right: 16,
+          top: 14,
+          child: Text(
+            '$_charCount/$_maxChars',
+            style: GoogleFonts.inter(
+              color: _charCount > _maxChars * 0.9 ? _danger : _fm,
+              fontSize: 11,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -784,105 +835,65 @@ class _UploadZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 140,
-      decoration: BoxDecoration(
-        color: _bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
-      ),
-      child: isLink
-          ? Center(
-              child: Column(
+    return GestureDetector(
+      onTap: isLink ? null : onBrowse,
+      child: Container(
+        width: double.infinity,
+        height: 220,
+        decoration: BoxDecoration(
+          color: _bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: isLink
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.link_rounded, color: _fm, size: 36),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Paste the link in the description above',
+                      style: GoogleFonts.inter(color: _fm, fontSize: 13),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.link_rounded, color: _fm, size: 28),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Paste the link in the description above',
-                    style: GoogleFonts.inter(color: _fm, fontSize: 12),
-                  ),
-                ],
-              ),
-            )
-          : Stack(
-              children: [
-                // Cloud icon at top
-                Positioned(
-                  top: 14,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      width: 48, height: 48,
-                      decoration: BoxDecoration(
-                        color: _primary.withValues(alpha: 0.094),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.cloud_rounded,
-                        color: _primary,
-                        size: 22,
-                      ),
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: _primary.withValues(alpha: 0.094),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.cloud_rounded,
+                      color: _primary,
+                      size: 36,
                     ),
                   ),
-                ),
-                // Text in middle
-                Positioned(
-                  top: 70,
-                  left: 0,
-                  right: 0,
-                  child: Text(
+                  const SizedBox(height: 20),
+                  Text(
                     'Drag & drop or browse',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       color: _fp,
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 90,
-                  left: 0,
-                  right: 0,
-                  child: Text(
-                    'PDF · DOC · MP4 · Max 20MB',
+                  const SizedBox(height: 8),
+                  Text(
+                    'PDF · DOC · PNG · Max 20MB',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(color: _fm, fontSize: 11),
+                    style: GoogleFonts.inter(color: _fm, fontSize: 13),
                   ),
-                ),
-                // Browse button at bottom
-                Positioned(
-                  bottom: 14,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: onBrowse,
-                      child: Container(
-                        width: 120,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: _bgCard2,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: _border),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Browse Files',
-                          style: GoogleFonts.inter(
-                            color: _fs,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }
