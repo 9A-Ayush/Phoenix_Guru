@@ -415,7 +415,8 @@ class LiveAnswer {
   );
 }
 
-class QuizAttempt {  final String id;
+class QuizAttempt {
+  final String id;
   final String testId;
   final String testTitle;
   final String userId;
@@ -476,6 +477,137 @@ class QuizAttempt {  final String id;
       userName: map['userName'] ?? 'Unknown',
       answers: Map<String, int>.from(map['answers']),
       completedAt: DateTime.parse(map['completedAt']),
+    );
+  }
+}
+
+// ── Feedback & Support ────────────────────────────────────────────────────────
+
+enum FeedbackType { bug, feature, general }
+
+enum FeedbackPriority { low, medium, high }
+
+enum FeedbackStatus { pending, inReview, resolved }
+
+class FeedbackModel {
+  final String id;
+  final String userId;
+  final String userName;
+  final UserRole userRole;
+  final FeedbackType type;
+  final String subject;
+  final String description;
+  final FeedbackPriority? priority;
+  final String? category;
+  final List<String> attachmentUrls;
+  final FeedbackStatus status;
+  final DateTime submittedAt;
+  final String? adminResponse;
+  final DateTime? respondedAt;
+
+  FeedbackModel({
+    String? id,
+    required this.userId,
+    required this.userName,
+    required this.userRole,
+    required this.type,
+    required this.subject,
+    required this.description,
+    this.priority,
+    this.category,
+    List<String>? attachmentUrls,
+    this.status = FeedbackStatus.pending,
+    DateTime? submittedAt,
+    this.adminResponse,
+    this.respondedAt,
+  })  : id = id ?? _uuid.v4(),
+        attachmentUrls = attachmentUrls ?? [],
+        submittedAt = submittedAt ?? DateTime.now();
+
+  String get typeLabel {
+    switch (type) {
+      case FeedbackType.bug:
+        return 'Bug Report';
+      case FeedbackType.feature:
+        return 'Feature Request';
+      case FeedbackType.general:
+        return 'General Feedback';
+    }
+  }
+
+  String get statusLabel {
+    switch (status) {
+      case FeedbackStatus.pending:
+        return 'Pending';
+      case FeedbackStatus.inReview:
+        return 'In Review';
+      case FeedbackStatus.resolved:
+        return 'Resolved';
+    }
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'userId': userId,
+      'userName': userName,
+      'userRole': userRole.name,
+      'type': type.name,
+      'subject': subject,
+      'description': description,
+      'priority': priority?.name,
+      'category': category,
+      'attachmentUrls': attachmentUrls,
+      'status': status.name,
+      'submittedAt': submittedAt.toIso8601String(),
+      'adminResponse': adminResponse,
+      'respondedAt': respondedAt?.toIso8601String(),
+    };
+  }
+
+  factory FeedbackModel.fromMap(Map<String, dynamic> map) {
+    return FeedbackModel(
+      id: map['id'],
+      userId: map['userId'],
+      userName: map['userName'],
+      userRole: UserRole.values.byName(map['userRole']),
+      type: FeedbackType.values.byName(map['type']),
+      subject: map['subject'],
+      description: map['description'],
+      priority: map['priority'] != null
+          ? FeedbackPriority.values.byName(map['priority'])
+          : null,
+      category: map['category'],
+      attachmentUrls: List<String>.from(map['attachmentUrls'] ?? []),
+      status: FeedbackStatus.values.byName(map['status'] ?? 'pending'),
+      submittedAt: DateTime.parse(map['submittedAt']),
+      adminResponse: map['adminResponse'],
+      respondedAt: map['respondedAt'] != null
+          ? DateTime.parse(map['respondedAt'])
+          : null,
+    );
+  }
+
+  FeedbackModel copyWith({
+    FeedbackStatus? status,
+    String? adminResponse,
+    DateTime? respondedAt,
+  }) {
+    return FeedbackModel(
+      id: id,
+      userId: userId,
+      userName: userName,
+      userRole: userRole,
+      type: type,
+      subject: subject,
+      description: description,
+      priority: priority,
+      category: category,
+      attachmentUrls: attachmentUrls,
+      status: status ?? this.status,
+      submittedAt: submittedAt,
+      adminResponse: adminResponse ?? this.adminResponse,
+      respondedAt: respondedAt ?? this.respondedAt,
     );
   }
 }

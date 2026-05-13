@@ -13,7 +13,7 @@ import '../quiz/join_live_quiz_screen.dart';
 import '../../teacher/screens/edit_profile_screen.dart';
 import '../../teacher/screens/change_password_screen.dart';
 import '../../teacher/screens/notifications_screen.dart';
-import '../../teacher/screens/help_support_screen.dart';
+import 'help_support_screen.dart';
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 class StudentShell extends StatefulWidget {
@@ -323,7 +323,7 @@ class StudentProfilePage extends StatelessWidget {
         MenuRow(icon:Symbols.lock,iconColor:AppColors.success,label:'Change Password',
           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ChangePasswordScreen()))),const SizedBox(height:10),
         MenuRow(icon:Symbols.help,iconColor:AppColors.textSecondary,label:'Help & Support',
-          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const HelpSupportScreen()))),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const StudentHelpSupportScreen()))),
         const SizedBox(height:20),
         SectionHeader(title:'My Quiz Results',action:'View All',onAction:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const QuizResultsListScreen()))),
         const SizedBox(height:12),

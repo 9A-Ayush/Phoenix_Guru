@@ -117,5 +117,36 @@ service cloud.firestore {
       // Only the user can read/write their own upload tracker
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // ── Feedback & Support ──────────────────────────────────────────────────
+    // Users can submit feedback and read their own submissions
+    // Admins/teachers can read all feedback
+    match /feedbacks/{feedbackId} {
+      allow read: if request.auth != null
+                  && (
+                    // User can read their own feedback
+                    resource.data.userId == request.auth.uid
+                    ||
+                    // Teachers can read all feedback (admin access)
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                  );
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      // Only teachers (admins) can update feedback (status, response)
+      allow update: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      allow delete: if false; // Feedback cannot be deleted
+    }
+
+    // ── Feedback Daily Trackers ─────────────────────────────────────────────
+    // Track daily submission limits (3 per day per user)
+    match /feedback_daily_trackers/{trackerId} {
+      allow read: if request.auth != null
+                  && trackerId.matches('^' + request.auth.uid + '_.*');
+      allow create, update: if request.auth != null
+                            && trackerId.matches('^' + request.auth.uid + '_.*')
+                            && request.resource.data.userId == request.auth.uid;
+      allow delete: if false; // Trackers should not be deleted
+    }
   }
 }

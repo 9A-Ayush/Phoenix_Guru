@@ -5,44 +5,44 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/feedback_form_screen.dart';
 
-class HelpSupportScreen extends StatefulWidget {
-  const HelpSupportScreen({super.key});
+class StudentHelpSupportScreen extends StatefulWidget {
+  const StudentHelpSupportScreen({super.key});
 
   @override
-  State<HelpSupportScreen> createState() => _HelpSupportScreenState();
+  State<StudentHelpSupportScreen> createState() => _StudentHelpSupportScreenState();
 }
 
-class _HelpSupportScreenState extends State<HelpSupportScreen> {
+class _StudentHelpSupportScreenState extends State<StudentHelpSupportScreen> {
   int? _expandedIndex;
 
   static const _faqs = [
     (
-      'How do I create a class?',
-      'Go to the Classes tab and tap "New Class". Fill in the class name, subject, and description. A 6-digit join code is auto-generated for your students.',
+      'How do I join a class?',
+      'Go to the Classes tab and tap "Join Class". Enter the 6-digit code provided by your teacher and tap Join.',
     ),
     (
-      'How do students join my class?',
-      'Share the 6-digit class code with your students. They can enter it in the "Join Class" section of their student app.',
+      'How do I take a test?',
+      'Go to the Tests tab to see available tests. Tap on a test to start. Make sure you complete it before the time runs out.',
     ),
     (
-      'How do I create and publish a test?',
-      'Go to the Tests tab and tap "New Test". Add a title, select a class, set the duration, and add questions using the question builder. Tap "Publish" when ready.',
+      'How do I join a Live Quiz?',
+      'Go to the Quiz tab and tap "Join Live Quiz". Enter the 6-digit PIN shown by your teacher and tap Join.',
     ),
     (
-      'How does Live Quiz work?',
-      'Go to the Quiz tab and tap "Start Live Quiz". Students join using the PIN shown on screen. You can reveal answers and move to the next question in real time.',
+      'Can I retake a test?',
+      'It depends on the test settings. Some tests allow multiple attempts while others allow only one. Check with your teacher.',
     ),
     (
-      'Can I edit a test after publishing?',
-      'Currently, published tests cannot be edited. You can delete and recreate the test if changes are needed.',
-    ),
-    (
-      'How do I view test results?',
-      'Go to the Quiz tab and tap "Test Results". You can see individual scores, grade distribution, and flagged questions.',
+      'How do I view my test results?',
+      'Go to the Tests tab and tap on a completed test to see your score, correct answers, and detailed results.',
     ),
     (
       'How do I change my password?',
       'Go to Profile → Change Password. Enter your current password and your new password. This only works for email/password accounts.',
+    ),
+    (
+      'What if I lose internet during a test?',
+      'Your progress is saved automatically. Reconnect and continue from where you left off. Make sure to submit before time runs out.',
     ),
   ];
 
