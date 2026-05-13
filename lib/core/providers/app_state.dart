@@ -578,7 +578,8 @@ class AppState extends ChangeNotifier {
         .snapshots()
         .map((doc) => doc.exists && doc.data() != null
             ? ClassModel.fromMap(doc.data()!)
-            : null);
+            : null)
+        .asBroadcastStream();
   }
 
   /// Fetches a user profile by UID from Firestore (one-time).

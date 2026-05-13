@@ -332,6 +332,7 @@ class CloudinaryService {
         .collection('materials')
         .orderBy('uploadedAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => doc.data()).toList());
+        .map((snap) => snap.docs.map((doc) => doc.data()).toList())
+        .asBroadcastStream();
   }
 }
