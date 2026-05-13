@@ -11,7 +11,6 @@ import '../../auth/screens/login_screen.dart';
 import '../quiz/quiz_screens.dart';
 import '../quiz/join_live_quiz_screen.dart';
 import '../../teacher/screens/edit_profile_screen.dart';
-import '../../teacher/screens/change_password_screen.dart';
 import '../../teacher/screens/notifications_screen.dart';
 import 'help_support_screen.dart';
 
@@ -321,8 +320,6 @@ class StudentProfilePage extends StatelessWidget {
           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EditProfileScreen()))),const SizedBox(height:10),
         MenuRow(icon:Symbols.notifications,iconColor:AppColors.warning,label:'Notifications',
           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NotificationsScreen()))),const SizedBox(height:10),
-        MenuRow(icon:Symbols.lock,iconColor:AppColors.success,label:'Change Password',
-          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ChangePasswordScreen()))),const SizedBox(height:10),
         MenuRow(icon:Symbols.help,iconColor:AppColors.textSecondary,label:'Help & Support',
           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const StudentHelpSupportScreen()))),
         const SizedBox(height:20),

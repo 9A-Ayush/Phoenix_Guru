@@ -458,7 +458,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Uploading to Cloudinary...',
+                        'Uploading to Clouds...',
                         style: GoogleFonts.inter(
                           color: _fp,
                           fontSize: 16,

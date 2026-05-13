@@ -18,7 +18,7 @@ import 'create_quiz_screen.dart';
 import 'active_sessions_screen.dart';
 import 'test_results_screen.dart';
 import 'edit_profile_screen.dart';
-import 'change_password_screen.dart';
+import 'material_upload_screen.dart';
 import 'notifications_screen.dart';
 import 'help_support_screen.dart';
 import 'edit_test_screen.dart';
@@ -1449,11 +1449,11 @@ class TeacherProfilePage extends StatelessWidget {
             MenuRow(icon: Symbols.person, iconColor: AppColors.primary, label: 'Edit Profile',
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
             const SizedBox(height: 10),
+            MenuRow(icon: Symbols.upload_file, iconColor: AppColors.success, label: 'Upload Material',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MaterialUploadScreen()))),
+            const SizedBox(height: 10),
             MenuRow(icon: Symbols.notifications, iconColor: AppColors.warning, label: 'Notifications',
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
-            const SizedBox(height: 10),
-            MenuRow(icon: Symbols.lock, iconColor: AppColors.success, label: 'Change Password',
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()))),
             const SizedBox(height: 10),
             MenuRow(icon: Symbols.help, iconColor: AppColors.textSecondary, label: 'Help & Support',
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()))),
