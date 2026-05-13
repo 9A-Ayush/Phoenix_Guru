@@ -158,12 +158,14 @@ class AppState extends ChangeNotifier {
       }
     } else {
       // Sign-out event — only reset if we're not mid-Google-flow and haven't
-      // already been cleared by logout() (which signs out first, then clears).
+      // already been cleared by logout().
       if (_authStatus != AuthStatus.needsRolePicker &&
           _authStatus != AuthStatus.unauthenticated) {
+        // Cancel streams FIRST before clearing auth state to avoid
+        // PERMISSION_DENIED warnings from final Firestore snapshots.
+        _cancelStreams();
         _currentUser = null;
         _authStatus = AuthStatus.unauthenticated;
-        _cancelStreams();
         _classes.clear();
         _tests.clear();
         _attempts.clear();
@@ -384,24 +386,27 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    // Sign out of Firebase FIRST so the auth token is invalidated before
-    // any in-flight Firestore listener retries — prevents PERMISSION_DENIED
-    // errors that appear when streams are cancelled while the token is still
-    // technically active.
-    await _googleSignIn.signOut();
-    await _auth.signOut();
-
-    // Now cancel streams and clear local state.
+    // Cancel streams FIRST before invalidating the auth token.
+    // This prevents the PERMISSION_DENIED warnings that occur when
+    // Firestore fires a final snapshot after the auth token is cleared.
     _cancelStreams();
-    // Reset Google sign-in rate limit for this user on clean logout.
-    if (_currentUser != null) {
-      RateLimiter.instance.reset('google_signin:${_currentUser!.email}');
-    }
+
+    // Clear local state immediately so no stale data is visible.
     _currentUser = null;
     _authStatus = AuthStatus.unauthenticated;
     _classes.clear();
     _tests.clear();
     _attempts.clear();
+
+    // Reset Google sign-in rate limit on clean logout.
+    if (_currentUser != null) {
+      RateLimiter.instance.reset('google_signin:${_currentUser!.email}');
+    }
+
+    // Now sign out of Firebase — auth token is invalidated after streams are gone.
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+
     notifyListeners();
   }
 
