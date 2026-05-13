@@ -64,6 +64,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
   final _titleCtrl   = TextEditingController();
   final _subjectCtrl = TextEditingController();
   final _descCtrl    = TextEditingController();
+  final _urlCtrl     = TextEditingController();
   final _formKey     = GlobalKey<FormState>();
 
   // state
@@ -86,6 +87,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
     _titleCtrl.dispose();
     _subjectCtrl.dispose();
     _descCtrl.dispose();
+    _urlCtrl.dispose();
     super.dispose();
   }
 
@@ -172,7 +174,7 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
           name: _titleCtrl.text.trim(),
           subject: _subjectCtrl.text.trim(),
           description: _descCtrl.text.trim(),
-          url: _descCtrl.text.trim(), // Link URL from description
+          url: _urlCtrl.text.trim(), // Link URL from URL field
           uploadedBy: teacherId,
         );
       } else {
@@ -337,9 +339,33 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
                               onSelect: (t) => setState(() {
                                 _selectedType = t;
                                 _removeFile();
+                                _urlCtrl.clear(); // Clear URL when switching types
                               }),
                             ),
                             const SizedBox(height: 16),
+
+                            // ── Link URL (only for link type) ──────────────────
+                            if (_selectedType == MaterialType.link) ...[
+                              _fieldLabel('Link URL'),
+                              const SizedBox(height: 8),
+                              _AppInput(
+                                controller: _urlCtrl,
+                                hint: 'https://example.com/resource',
+                                icon: Icons.link_rounded,
+                                validator: (v) {
+                                  if (_selectedType == MaterialType.link) {
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'Enter a URL';
+                                    }
+                                    if (!v.startsWith('http://') && !v.startsWith('https://')) {
+                                      return 'URL must start with http:// or https://';
+                                    }
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                            ],
 
                             // ── Description ────────────────────────────────────
                             _fieldLabel('Description (optional)'),
@@ -347,19 +373,21 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
                             _DescField(controller: _descCtrl),
                             const SizedBox(height: 16),
 
-                            // ── Attach File ────────────────────────────────────
-                            _fieldLabel('Attach File'),
-                            const SizedBox(height: 8),
-                            _pickedFile != null
-                                ? _FilePreviewCard(
-                                    name: _pickedFileName!,
-                                    size: _pickedFileSize!,
-                                    onRemove: _removeFile,
-                                  )
-                                : _UploadZone(
-                                    isLink: _selectedType == MaterialType.link,
-                                    onBrowse: _pickFile,
-                                  ),
+                            // ── Attach File (not for links) ────────────────────
+                            if (_selectedType != MaterialType.link) ...[
+                              _fieldLabel('Attach File'),
+                              const SizedBox(height: 8),
+                              _pickedFile != null
+                                  ? _FilePreviewCard(
+                                      name: _pickedFileName!,
+                                      size: _pickedFileSize!,
+                                      onRemove: _removeFile,
+                                    )
+                                  : _UploadZone(
+                                      isLink: false,
+                                      onBrowse: _pickFile,
+                                    ),
+                            ],
                           ],
                         ),
                       ),
