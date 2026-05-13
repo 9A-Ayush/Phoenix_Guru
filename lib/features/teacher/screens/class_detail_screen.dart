@@ -1247,7 +1247,10 @@ class _MaterialCard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       useRootNavigator: false,
-      builder: (_) => _EditMaterialSheet(material: material),
+      builder: (_) => _EditMaterialSheet(
+        classId: classId,
+        material: material,
+      ),
     );
   }
 
@@ -1435,8 +1438,12 @@ class _MaterialCard extends StatelessWidget {
 // ── Edit Material Sheet ───────────────────────────────────────────────────────
 
 class _EditMaterialSheet extends StatefulWidget {
+  final String classId;
   final Map<String, dynamic> material;
-  const _EditMaterialSheet({required this.material});
+  const _EditMaterialSheet({
+    required this.classId,
+    required this.material,
+  });
 
   @override
   State<_EditMaterialSheet> createState() => _EditMaterialSheetState();
@@ -1516,17 +1523,16 @@ class _EditMaterialSheetState extends State<_EditMaterialSheet> {
     setState(() => _saving = true);
 
     try {
-      final classId = widget.material['classId'] as String?;
       final materialId = widget.material['id'] as String?;
 
-      if (classId == null || materialId == null) {
+      if (materialId == null) {
         throw 'Invalid material data';
       }
 
       // Update material in Firestore
       await FirebaseFirestore.instance
           .collection('classes')
-          .doc(classId)
+          .doc(widget.classId)
           .collection('materials')
           .doc(materialId)
           .update({
