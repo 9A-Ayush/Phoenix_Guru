@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models.dart';
 import '../../../core/providers/app_state.dart';
@@ -1124,6 +1125,7 @@ class _MaterialTab extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final material = materials[index];
                   return _MaterialCard(
+                    classId: cls.id,
                     material: material,
                     typeIcon: _getTypeIcon(material['type'] ?? ''),
                     typeColor: _getTypeColor(material['type'] ?? ''),
@@ -1179,12 +1181,14 @@ class _UploadButton extends StatelessWidget {
 // ── Material Card ─────────────────────────────────────────────────────────────
 
 class _MaterialCard extends StatelessWidget {
+  final String classId;
   final Map<String, dynamic> material;
   final IconData typeIcon;
   final Color typeColor;
   final String sizeText;
 
   const _MaterialCard({
+    required this.classId,
     required this.material,
     required this.typeIcon,
     required this.typeColor,
@@ -1229,6 +1233,82 @@ class _MaterialCard extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error opening link: $e', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  void _showEditSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      useRootNavigator: false,
+      builder: (_) => _EditMaterialSheet(material: material),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete Material',
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+        content: Text(
+          'Are you sure you want to delete "${material['name']}"?\n\nThis cannot be undone.',
+          style: GoogleFonts.poppins(
+              color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete',
+                style: GoogleFonts.poppins(
+                    color: AppColors.error, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final materialId = material['id'] as String?;
+      
+      if (materialId == null) {
+        throw 'Invalid material data';
+      }
+
+      final cloudinary = CloudinaryService();
+      await cloudinary.deleteMaterial(classId, materialId);
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Material deleted',
+              style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting material: $e',
+              style: GoogleFonts.poppins(color: Colors.white)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1304,14 +1384,309 @@ class _MaterialCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Arrow icon
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: AppColors.textMuted,
-              size: 16,
+            // Action buttons
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Edit button
+                GestureDetector(
+                  onTap: () => _showEditSheet(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Symbols.edit,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Delete button
+                GestureDetector(
+                  onTap: () => _confirmDelete(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Symbols.delete,
+                      color: AppColors.error,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Edit Material Sheet ───────────────────────────────────────────────────────
+
+class _EditMaterialSheet extends StatefulWidget {
+  final Map<String, dynamic> material;
+  const _EditMaterialSheet({required this.material});
+
+  @override
+  State<_EditMaterialSheet> createState() => _EditMaterialSheetState();
+}
+
+class _EditMaterialSheetState extends State<_EditMaterialSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _subjectCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _urlCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.material['name'] ?? '');
+    _subjectCtrl = TextEditingController(text: widget.material['subject'] ?? '');
+    _descCtrl = TextEditingController(text: widget.material['description'] ?? '');
+    _urlCtrl = TextEditingController(text: widget.material['url'] ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _subjectCtrl.dispose();
+    _descCtrl.dispose();
+    _urlCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+
+    final name = _nameCtrl.text.trim();
+    final subject = _subjectCtrl.text.trim();
+    final description = _descCtrl.text.trim();
+    final url = _urlCtrl.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a name', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    if (subject.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a subject', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    // For link type, validate URL
+    final type = widget.material['type'] as String? ?? '';
+    if (type == 'link' && url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a URL', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    try {
+      final classId = widget.material['classId'] as String?;
+      final materialId = widget.material['id'] as String?;
+
+      if (classId == null || materialId == null) {
+        throw 'Invalid material data';
+      }
+
+      // Update material in Firestore
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .collection('materials')
+          .doc(materialId)
+          .update({
+        'name': name,
+        'subject': subject,
+        'description': description,
+        if (type == 'link') 'url': url,
+      });
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Material updated', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating material: $e', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final type = widget.material['type'] as String? ?? '';
+    final isLink = type == 'link';
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      decoration: const BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Edit Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Name field
+          Text('Name', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _nameCtrl,
+            style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Material name',
+              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Subject field
+          Text('Subject', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _subjectCtrl,
+            style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Subject',
+              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Description field
+          Text('Description', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _descCtrl,
+            style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Description (optional)',
+              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+
+          // URL field (only for links)
+          if (isLink) ...[
+            const SizedBox(height: 16),
+            Text('URL', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _urlCtrl,
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'https://example.com',
+                hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // Save button
+          GestureDetector(
+            onTap: _saving ? null : _save,
+            child: Container(
+              height: 54,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: _saving ? AppColors.textMuted : AppColors.primary,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              alignment: Alignment.center,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text('Save Changes', style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
       ),
     );
   }

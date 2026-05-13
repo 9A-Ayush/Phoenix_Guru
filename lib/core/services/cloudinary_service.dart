@@ -301,6 +301,7 @@ class CloudinaryService {
         .doc(materialId)
         .set({
       'id': materialId,
+      'classId': classId,
       'name': name,
       'subject': subject,
       'description': description,
@@ -331,6 +332,7 @@ class CloudinaryService {
         .doc(materialId)
         .set({
       'id': materialId,
+      'classId': classId,
       'name': name,
       'subject': subject,
       'description': description,
