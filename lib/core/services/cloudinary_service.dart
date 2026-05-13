@@ -15,7 +15,7 @@ const _maxFileSizeBytes = 20 * 1024 * 1024;      // 20 MB
 
 // Cloudinary config (exposed in app, but unsigned preset limits uploads)
 const _cloudName = 'dwv7xyucs';
-const _uploadPreset = 'phoenix_guru_unsigned';
+const _uploadPreset = 'phoenix_guru_materials';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODELS
