@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 const _uuid = Uuid();
 
@@ -13,9 +14,9 @@ const _totalFreeBytes = 25 * 1024 * 1024 * 1024; // 25 GB
 const _dailyLimitBytes = 500 * 1024 * 1024;      // 500 MB
 const _maxFileSizeBytes = 20 * 1024 * 1024;      // 20 MB
 
-// Cloudinary config (exposed in app, but unsigned preset limits uploads)
-const _cloudName = 'dwv7xyucs';
-const _uploadPreset = 'phoenix_guru_materials';
+// Cloudinary config from environment variables
+String get _cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
+String get _uploadPreset => dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? '';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODELS
