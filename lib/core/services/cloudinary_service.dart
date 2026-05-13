@@ -314,6 +314,36 @@ class CloudinaryService {
     });
   }
 
+  /// Save link material to Firestore (no Cloudinary upload)
+  Future<void> saveMaterialLink({
+    required String classId,
+    required String name,
+    required String subject,
+    required String description,
+    required String url,
+    required String uploadedBy,
+  }) async {
+    final materialId = _uuid.v4();
+    await _firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('materials')
+        .doc(materialId)
+        .set({
+      'id': materialId,
+      'name': name,
+      'subject': subject,
+      'description': description,
+      'url': url,
+      'publicId': '',
+      'type': 'link',
+      'format': 'link',
+      'sizeBytes': 0,
+      'uploadedBy': uploadedBy,
+      'uploadedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   /// Delete material from Firestore (does NOT delete from Cloudinary)
   Future<void> deleteMaterial(String classId, String materialId) async {
     await _firestore

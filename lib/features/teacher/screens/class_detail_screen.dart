@@ -27,6 +27,15 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   final ValueNotifier<bool> _selectionMode = ValueNotifier(false);
   final ValueNotifier<Set<String>> _selectedIds = ValueNotifier({});
 
+  // Cache the stream to prevent "already listened to" error
+  late final Stream<ClassModel?> _classStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _classStream = context.read<AppState>().classStream(widget.cls.id);
+  }
+
   @override
   void dispose() {
     _selectionMode.dispose();
@@ -162,7 +171,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<ClassModel?>(
-      stream: context.read<AppState>().classStream(widget.cls.id),
+      stream: _classStream,
       initialData: widget.cls,
       builder: (context, snapshot) {
         final cls = snapshot.data ?? widget.cls;

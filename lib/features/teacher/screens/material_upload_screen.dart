@@ -165,26 +165,38 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
       final cloudinary = CloudinaryService();
       final teacherId = appState.currentUser!.id;
 
-      // Upload to Cloudinary
-      final result = await cloudinary.uploadFile(
-        file: _pickedFile!,
-        fileName: _pickedFileName!,
-        teacherId: teacherId,
-        onProgress: (progress) {
-          if (mounted) setState(() => _uploadProgress = progress);
-        },
-      );
+      if (_selectedType == MaterialType.link) {
+        // For links, save directly to Firestore without Cloudinary upload
+        await cloudinary.saveMaterialLink(
+          classId: _selectedClass!.id,
+          name: _titleCtrl.text.trim(),
+          subject: _subjectCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          url: _descCtrl.text.trim(), // Link URL from description
+          uploadedBy: teacherId,
+        );
+      } else {
+        // Upload file to Cloudinary
+        final result = await cloudinary.uploadFile(
+          file: _pickedFile!,
+          fileName: _pickedFileName!,
+          teacherId: teacherId,
+          onProgress: (progress) {
+            if (mounted) setState(() => _uploadProgress = progress);
+          },
+        );
 
-      // Save to Firestore
-      await cloudinary.saveMaterial(
-        classId: _selectedClass!.id,
-        name: _titleCtrl.text.trim(),
-        subject: _subjectCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        type: _selectedType.label.toLowerCase(),
-        cloudinaryResult: result,
-        uploadedBy: teacherId,
-      );
+        // Save to Firestore
+        await cloudinary.saveMaterial(
+          classId: _selectedClass!.id,
+          name: _titleCtrl.text.trim(),
+          subject: _subjectCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          type: _selectedType.label.toLowerCase(),
+          cloudinaryResult: result,
+          uploadedBy: teacherId,
+        );
+      }
 
       if (mounted) {
         _showSnack('Material uploaded successfully!');
@@ -1067,25 +1079,21 @@ class _BottomBar extends StatelessWidget {
                     ),
                   ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isLoading)
-                const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
-              Text(
-                isLoading ? 'Uploading...' : 'Upload Material',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+          child: Center(
+            child: Text(
+              'Upload Material',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
               if (!isLoading) ...[
                 const SizedBox(width: 8),
                 const Icon(Icons.upload_rounded, color: Colors.white, size: 18),
