@@ -8,8 +8,32 @@ A full-stack Flutter education platform for teachers and students, featuring liv
 
 ## Recent Changes
 
+### May 13, 2026
+- **Material Management** — Full CRUD operations for materials:
+  - Edit material metadata (name, subject, description, URL for links)
+  - Delete materials with confirmation dialog
+  - Open materials in external browser (PDF, images, docs, links)
+  - Edit/delete buttons on each material card
+- **Environment Variables** — Moved Cloudinary credentials to `.env` file using `flutter_dotenv`
+  - Removed hardcoded credentials from source code
+  - Added `.env.example` template for setup
+  - Improved security by keeping sensitive data out of repository
+- **Security Audit** — Removed unused API keys and secrets from frontend
+  - Created `SECURITY.md` with security guidelines
+  - Documented unsigned vs signed upload tradeoffs
+  - All sensitive credentials removed from frontend code
+- **Upload Progress** — Fixed progress bar showing 0% during upload
+  - Shows simulated progress: 10% → 80% → 100%
+  - Better UX feedback during upload process
+- **Android URL Support** — Added queries to AndroidManifest.xml for url_launcher
+  - Fixed "Cannot open this link" error on Android 11+
+  - Materials now open correctly in external browser
+- **Firestore Rules** — Updated to allow material updates
+  - Teachers can now edit their class materials
+  - Proper permission checks for security
+
 ### May 12, 2026
-- **Cloudinary Integration** — Migrated from Firebase Storage to Cloudinary for material uploads. Uses unsigned uploads (no Firebase Functions required). 25 GB free storage, 500 MB/day per teacher rate limit. Requires unsigned upload preset `phoenix_guru_unsigned` in Cloudinary dashboard.
+- **Cloudinary Integration** — Migrated from Firebase Storage to Cloudinary for material uploads. Uses unsigned uploads (no Firebase Functions required). 25 GB free storage, 500 MB/day per teacher rate limit. Requires unsigned upload preset `phoenix_guru_materials` in Cloudinary dashboard.
 - **Material Upload Screen** — `MaterialUploadScreen` integrated into `ClassDetailScreen` Material tab. File picker with type chips (PDF/Image/Doc/Link), class selector, 20 MB limit, upload progress bar. Uses `file_picker ^8.0.0`.
 - **Test Results moved to Tests tab** — "Results" button added to `TeacherTestsPage` header (green, next to "New Test"). Removed from Quiz tab.
 - **Headers standardized** — All teacher screens now use the `1C1240→bg` gradient header style matching `ClassDetailScreen`.
@@ -28,7 +52,7 @@ lib/
 │   ├── providers/
 │   │   └── app_state.dart                 # Central ChangeNotifier — auth, data, Firestore ops
 │   ├── services/
-│   │   ├── cloudinary_service.dart        # Material upload to Cloudinary (unsigned)
+│   │   ├── cloudinary_service.dart        # Material upload/delete/edit to Cloudinary (unsigned)
 │   │   ├── quiz_service.dart              # Isolated Firestore logic for live quiz sessions
 │   │   └── rate_limiter.dart              # In-memory client-side rate limiter (singleton)
 │   └── theme/
@@ -297,7 +321,7 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | T03 | Tests | Cards with status, three-dot menu + "Results" button |
 | T04 | Live Quiz | Create Quiz + Start from Test + "Sessions" badge button |
 | T05 | Profile | Stats, gradient avatar + Teacher badge |
-| T06 | Class Detail | Real-time students/tests/material tabs, multi-select remove |
+| T06 | Class Detail | Real-time students/tests/material tabs, multi-select remove, material CRUD |
 | T07 | Create Class | Subject dropdown, auto class code (max 5) |
 | T08 | Create Test | Question builder, date+time picker, attempts (max 30 Qs) |
 | T09 | Create Quiz | Lightweight live quiz builder (no class/expiry, max 30 Qs) |
@@ -306,7 +330,7 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | T12 | Active Sessions | All active sessions, multi-select close (top-right), long-press single close |
 | T13 | Live Quiz Host | Real-time answer distribution |
 | T14 | Test Results | Live Firestore scores, grade bars, flagged questions |
-| T15 | Material Upload | File picker, type chips, class selector, progress bar |
+| T15 | Material Upload | File picker, type chips, class selector, progress bar, link support |
 | T16 | Edit Profile | Name edit → Firestore |
 | T17 | Change Password | Re-auth + Firebase Auth update |
 | T18 | Notifications | 5 toggles → Firestore (3s debounce) |
@@ -325,11 +349,17 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 1. Create account at [cloudinary.com](https://cloudinary.com)
 2. Go to Settings → Upload → Upload Presets
 3. Create preset:
-   - **Name**: `phoenix_guru_unsigned`
+   - **Name**: `phoenix_guru_materials`
    - **Signing mode**: Unsigned
    - **Folder**: `phoenix_guru/materials`
    - **Max file size**: 20 MB
    - **Allowed formats**: pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,webp,mp4,mov
+4. Copy your Cloud Name from Dashboard
+5. Create `.env` file in project root (copy from `.env.example`):
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name_here
+CLOUDINARY_UPLOAD_PRESET=phoenix_guru_materials
+```
 
 ### Firebase Setup
 1. Create project at [console.firebase.google.com](https://console.firebase.google.com)
@@ -351,11 +381,12 @@ flutter run
 
 ### Security Notes
 - `google-services.json` and `GoogleService-Info.plist` are **gitignored** — never commit to public repo
+- `.env` file with Cloudinary credentials is **gitignored** — use `.env.example` as template
 - Firebase API keys in those files are restricted by SHA-1 + package name — safe for mobile
-- `.env` file with `GOOGLE_API_KEY` is gitignored
 - All rate limits are client-side (in-memory) — resets on app restart
 - Server-side enforcement via Firestore security rules (deployed)
 - Cloudinary upload preset is exposed in APK (unsigned uploads) — acceptable for MVP, consider Firebase Functions for production
+- See `SECURITY.md` for detailed security guidelines and best practices
 
 ### Dependencies
 
@@ -366,6 +397,8 @@ flutter run
 | `cloud_firestore` | ^4.17.0 | Real-time database |
 | `google_sign_in` | ^6.2.1 | Google OAuth |
 | `http` | ^1.2.0 | HTTP client for Cloudinary uploads |
+| `url_launcher` | ^6.3.1 | Open materials in external browser |
+| `flutter_dotenv` | ^5.1.0 | Environment variable management |
 | `qr_flutter` | ^4.1.0 | QR code generation |
 | `file_picker` | ^8.0.0 | File selection for material upload |
 | `provider` | ^6.1.2 | State management |
@@ -382,26 +415,39 @@ flutter run
 ### Material Upload Flow
 ```
 MaterialUploadScreen
-  ├── Select file (file_picker) → max 20 MB
-  ├── Check daily quota (500 MB/day per teacher)
-  ├── Check total quota (25 GB across all teachers)
-  ├── Upload to Cloudinary (unsigned preset)
-  │     → https://api.cloudinary.com/v1_1/dwv7xyucs/auto/upload
-  │     → folder: phoenix_guru/materials
-  ├── Save metadata to Firestore
-  │     → classes/{classId}/materials/{materialId}
-  │     → url, publicId, sizeBytes, uploadedBy, uploadedAt
-  └── Update daily usage tracker
-        → users/{teacherId}/uploadTracker/daily
+  ├── Select material type (PDF/Image/Doc/Link)
+  ├── For files:
+  │     ├── Select file (file_picker) → max 20 MB
+  │     ├── Check daily quota (500 MB/day per teacher)
+  │     ├── Check total quota (25 GB across all teachers)
+  │     ├── Upload to Cloudinary (unsigned preset)
+  │     │     → https://api.cloudinary.com/v1_1/{cloud_name}/auto/upload
+  │     │     → folder: phoenix_guru/materials
+  │     │     → Progress: 10% → 80% → 100%
+  │     ├── Save metadata to Firestore
+  │     │     → classes/{classId}/materials/{materialId}
+  │     │     → url, publicId, sizeBytes, uploadedBy, uploadedAt
+  │     └── Update daily usage tracker
+  │           → users/{teacherId}/uploadTracker/daily
+  │
+  └── For links:
+        └── Save URL directly to Firestore (no Cloudinary upload)
+
+Material Display (Class Detail → Material Tab)
+  ├── List all materials with type icons (PDF/Image/Doc/Link)
+  ├── Tap material → Open in external browser (url_launcher)
+  ├── Edit button → Edit material sheet (name, subject, description, URL)
+  └── Delete button → Confirmation dialog → Delete from Firestore
 ```
 
 ### CloudinaryService Methods
 | Method | Description |
 |---|---|
-| `uploadFile(file, fileName, teacherId)` | Direct unsigned upload to Cloudinary |
+| `uploadFile(file, fileName, teacherId)` | Direct unsigned upload to Cloudinary with progress tracking |
 | `saveMaterial(classId, name, ...)` | Save material metadata to Firestore |
+| `saveMaterialLink(classId, name, url, ...)` | Save link material (no Cloudinary upload) |
 | `deleteMaterial(classId, materialId)` | Delete material from Firestore |
-| `materialsStream(classId)` | Real-time stream of materials |
+| `materialsStream(classId)` | Real-time stream of materials for a class |
 | `getStorageQuota(teacherId)` | Get total storage used (25 GB limit) |
 | `getDailyUsage(teacherId)` | Get today's upload usage (500 MB limit) |
 
