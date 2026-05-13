@@ -255,17 +255,24 @@ class CloudinaryService {
     // Send with progress tracking
     final streamedResponse = await request.send();
 
-    if (onProgress != null) {
-      int bytesReceived = 0;
-      streamedResponse.stream.listen(
-        (chunk) {
-          bytesReceived += chunk.length;
-          onProgress(bytesReceived / fileBytes);
-        },
-      );
+    // Convert stream to bytes while tracking progress
+    final List<int> bytes = [];
+    int bytesReceived = 0;
+    
+    await for (final chunk in streamedResponse.stream) {
+      bytes.addAll(chunk);
+      bytesReceived += chunk.length;
+      if (onProgress != null) {
+        onProgress(bytesReceived / fileBytes);
+      }
     }
 
-    final response = await http.Response.fromStream(streamedResponse);
+    // Build response from collected bytes
+    final response = http.Response.bytes(
+      bytes,
+      streamedResponse.statusCode,
+      headers: streamedResponse.headers,
+    );
 
     if (response.statusCode != 200) {
       throw 'Upload failed: ${response.body}';
