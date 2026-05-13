@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../../core/models.dart';
-import '../../core/providers/auth_provider.dart';
+import '../../core/providers/app_state.dart';
 import '../../core/services/feedback_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -46,11 +46,11 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   }
 
   Future<void> _loadSubmissionCount() async {
-    final authProvider = context.read<AuthProvider>();
-    if (authProvider.user == null) return;
+    final appState = context.read<AppState>();
+    if (appState.currentUser == null) return;
 
     try {
-      final count = await _feedbackService.getTodaySubmissionCount(authProvider.user!.id);
+      final count = await _feedbackService.getTodaySubmissionCount(appState.currentUser!.id);
       setState(() {
         _todaySubmissions = count;
         _remainingSubmissions = 3 - count;
@@ -70,8 +70,8 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AuthProvider>();
-    if (authProvider.user == null) {
+    final appState = context.read<AppState>();
+    if (appState.currentUser == null) {
       _showError('You must be logged in to submit feedback');
       return;
     }
@@ -80,9 +80,9 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
 
     try {
       final feedback = FeedbackModel(
-        userId: authProvider.user!.id,
-        userName: authProvider.user!.name,
-        userRole: authProvider.user!.role,
+        userId: appState.currentUser!.id,
+        userName: appState.currentUser!.name,
+        userRole: appState.currentUser!.role,
         type: _selectedType,
         subject: _subjectController.text.trim(),
         description: _descriptionController.text.trim(),
