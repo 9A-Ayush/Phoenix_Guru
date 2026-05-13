@@ -214,176 +214,232 @@ class _MaterialUploadScreenState extends State<MaterialUploadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      body: Column(
-          children: [
-            // ── Header (flat bg, matches Pencil design) ────────────────────
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 20, 24, 20),
-              color: _bg,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Back button (plain row with chevron + text)
-                  GestureDetector(
-                    onTap: () => Navigator.maybePop(context),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.chevron_left_rounded,
-                          color: _fs,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Back',
-                          style: GoogleFonts.inter(
-                            color: _fs,
-                            fontSize: 14,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Upload Material',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Share resources with your students',
-                    style: GoogleFonts.inter(
-                      color: _fm,
-                      fontSize: 13,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Scrollable form ─────────────────────────────────────────────
-            Expanded(
-              child: Stack(
-                children: [
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              // ── Header (flat bg, matches Pencil design) ────────────────────
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 20, 24, 20),
+                color: _bg,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Back button (plain row with chevron + text)
+                    GestureDetector(
+                      onTap: () => Navigator.maybePop(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // ── Title ──────────────────────────────────────────
-                          _fieldLabel('Title'),
-                          const SizedBox(height: 8),
-                          _AppInput(
-                            controller: _titleCtrl,
-                            hint: 'e.g. Chapter 3 — Laws of Motion',
-                            icon: Icons.text_fields_rounded,
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter a title'
-                                : null,
+                          const Icon(
+                            Icons.chevron_left_rounded,
+                            color: _fs,
+                            size: 18,
                           ),
-                          const SizedBox(height: 16),
-
-                          // ── Subject ────────────────────────────────────────
-                          _fieldLabel('Subject'),
-                          const SizedBox(height: 8),
-                          _AppInput(
-                            controller: _subjectCtrl,
-                            hint: 'e.g. Physics',
-                            icon: Icons.book_outlined,
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter a subject'
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ── Assign to Class ────────────────────────────────
-                          _fieldLabel('Assign to Class'),
-                          const SizedBox(height: 8),
-                          _ClassField(
-                            selected: _selectedClass,
-                            onTap: _showClassPicker,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ── Material Type ──────────────────────────────────
-                          _fieldLabel('Material Type'),
-                          const SizedBox(height: 8),
-                          _TypeChips(
-                            selected: _selectedType,
-                            onSelect: (t) => setState(() {
-                              _selectedType = t;
-                              _removeFile();
-                            }),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ── Description ────────────────────────────────────
-                          _fieldLabel('Description (optional)'),
-                          const SizedBox(height: 8),
-                          _DescField(controller: _descCtrl),
-                          const SizedBox(height: 16),
-
-                          // ── Attach File ────────────────────────────────────
-                          _fieldLabel('Attach File'),
-                          const SizedBox(height: 8),
-                          _pickedFile != null
-                              ? _FilePreviewCard(
-                                  name: _pickedFileName!,
-                                  size: _pickedFileSize!,
-                                  onRemove: _removeFile,
-                                )
-                              : _UploadZone(
-                                  isLink: _selectedType == MaterialType.link,
-                                  onBrowse: _pickFile,
-                                ),
-
-                          // ── Upload progress ────────────────────────────────
-                          if (_isUploading) ...[
-                            const SizedBox(height: 16),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: _uploadProgress,
-                                minHeight: 4,
-                                backgroundColor: _bgCard2,
-                                valueColor:
-                                    const AlwaysStoppedAnimation(_primary),
-                              ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Back',
+                            style: GoogleFonts.inter(
+                              color: _fs,
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Uploading... ${(_uploadProgress * 100).toInt()}%',
-                              style:
-                                  GoogleFonts.inter(color: _fm, fontSize: 11),
-                            ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
-                  ),
-
-                  // ── Sticky bottom button ──────────────────────────────────
-                  Positioned(
-                    left: 0, right: 0, bottom: 0,
-                    child: _BottomBar(
-                      isLoading: _isUploading,
-                      onTap: _isUploading ? null : _submit,
+                    const SizedBox(height: 18),
+                    Text(
+                      'Upload Material',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Share resources with your students',
+                      style: GoogleFonts.inter(
+                        color: _fm,
+                        fontSize: 13,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Scrollable form ─────────────────────────────────────────────
+              Expanded(
+                child: Stack(
+                  children: [
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Title ──────────────────────────────────────────
+                            _fieldLabel('Title'),
+                            const SizedBox(height: 8),
+                            _AppInput(
+                              controller: _titleCtrl,
+                              hint: 'e.g. Chapter 3 — Laws of Motion',
+                              icon: Icons.text_fields_rounded,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Enter a title'
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Subject ────────────────────────────────────────
+                            _fieldLabel('Subject'),
+                            const SizedBox(height: 8),
+                            _AppInput(
+                              controller: _subjectCtrl,
+                              hint: 'e.g. Physics',
+                              icon: Icons.book_outlined,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Enter a subject'
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Assign to Class ────────────────────────────────
+                            _fieldLabel('Assign to Class'),
+                            const SizedBox(height: 8),
+                            _ClassField(
+                              selected: _selectedClass,
+                              onTap: _showClassPicker,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Material Type ──────────────────────────────────
+                            _fieldLabel('Material Type'),
+                            const SizedBox(height: 8),
+                            _TypeChips(
+                              selected: _selectedType,
+                              onSelect: (t) => setState(() {
+                                _selectedType = t;
+                                _removeFile();
+                              }),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Description ────────────────────────────────────
+                            _fieldLabel('Description (optional)'),
+                            const SizedBox(height: 8),
+                            _DescField(controller: _descCtrl),
+                            const SizedBox(height: 16),
+
+                            // ── Attach File ────────────────────────────────────
+                            _fieldLabel('Attach File'),
+                            const SizedBox(height: 8),
+                            _pickedFile != null
+                                ? _FilePreviewCard(
+                                    name: _pickedFileName!,
+                                    size: _pickedFileSize!,
+                                    onRemove: _removeFile,
+                                  )
+                                : _UploadZone(
+                                    isLink: _selectedType == MaterialType.link,
+                                    onBrowse: _pickFile,
+                                  ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // ── Sticky bottom button ──────────────────────────────────
+                    Positioned(
+                      left: 0, right: 0, bottom: 0,
+                      child: _BottomBar(
+                        isLoading: _isUploading,
+                        onTap: _isUploading ? null : _submit,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // ── Upload overlay (centered with black transparent background) ────
+          if (_isUploading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.75),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: _bgCard,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Circular progress indicator
+                      SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 80,
+                              height: 80,
+                              child: CircularProgressIndicator(
+                                value: _uploadProgress,
+                                strokeWidth: 6,
+                                backgroundColor: _bgCard2,
+                                valueColor: const AlwaysStoppedAnimation(_primary),
+                              ),
+                            ),
+                            Text(
+                              '${(_uploadProgress * 100).toInt()}%',
+                              style: GoogleFonts.inter(
+                                color: _fp,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Uploading to Cloudinary...',
+                        style: GoogleFonts.inter(
+                          color: _fp,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Please wait while we upload your file',
+                        style: GoogleFonts.inter(
+                          color: _fm,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
+        ],
       ),
     );
   }
