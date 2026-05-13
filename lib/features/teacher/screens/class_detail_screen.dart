@@ -4,9 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models.dart';
 import '../../../core/providers/app_state.dart';
+import '../../../core/services/cloudinary_service.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'create_test_screen.dart';
 import 'test_results_screen.dart';
@@ -1036,47 +1038,277 @@ class _MaterialTab extends StatelessWidget {
   final ClassModel cls;
   const _MaterialTab({required this.cls});
 
+  IconData _getTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'pdf':
+        return Icons.picture_as_pdf_rounded;
+      case 'image':
+        return Icons.image_rounded;
+      case 'doc':
+        return Icons.description_rounded;
+      case 'link':
+        return Icons.link_rounded;
+      default:
+        return Icons.insert_drive_file_rounded;
+    }
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'pdf':
+        return const Color(0xFFEF4444);
+      case 'image':
+        return const Color(0xFF8B5CF6);
+      case 'doc':
+        return const Color(0xFF3B82F6);
+      case 'link':
+        return const Color(0xFF10B981);
+      default:
+        return AppColors.textMuted;
+    }
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes == 0) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Symbols.folder_open, color: AppColors.textMuted, size: 52),
-        const SizedBox(height: 12),
-        Text('No materials yet', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
-        Text('Upload study materials for your students', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 13)),
-        const SizedBox(height: 32),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => MaterialUploadScreen(preselectedClass: cls),
-            )),
-            child: Container(
-              height: 54,
-              width: double.infinity,
+    final cloudinary = CloudinaryService();
+    
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: cloudinary.materialsStream(cls.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+
+        final materials = snapshot.data ?? [];
+
+        if (materials.isEmpty) {
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Symbols.folder_open, color: AppColors.textMuted, size: 52),
+              const SizedBox(height: 12),
+              Text('No materials yet', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text('Upload study materials for your students', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 13)),
+              const SizedBox(height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _UploadButton(cls: cls),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            // Upload button at top
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: _UploadButton(cls: cls),
+            ),
+            // Materials list
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                itemCount: materials.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final material = materials[index];
+                  return _MaterialCard(
+                    material: material,
+                    typeIcon: _getTypeIcon(material['type'] ?? ''),
+                    typeColor: _getTypeColor(material['type'] ?? ''),
+                    sizeText: _formatSize(material['sizeBytes'] ?? 0),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Upload Button ─────────────────────────────────────────────────────────────
+
+class _UploadButton extends StatelessWidget {
+  final ClassModel cls;
+  const _UploadButton({required this.cls});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+        builder: (_) => MaterialUploadScreen(preselectedClass: cls),
+      )),
+      child: Container(
+        height: 54,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Symbols.upload, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Text('Upload Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Material Card ─────────────────────────────────────────────────────────────
+
+class _MaterialCard extends StatelessWidget {
+  final Map<String, dynamic> material;
+  final IconData typeIcon;
+  final Color typeColor;
+  final String sizeText;
+
+  const _MaterialCard({
+    required this.material,
+    required this.typeIcon,
+    required this.typeColor,
+    required this.sizeText,
+  });
+
+  void _openMaterial(BuildContext context) async {
+    final url = material['url'] as String?;
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No URL available', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cannot open this link', style: GoogleFonts.poppins(color: Colors.white)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening link: $e', style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = material['name'] as String? ?? 'Untitled';
+    final subject = material['subject'] as String? ?? '';
+    
+    return GestureDetector(
+      onTap: () => _openMaterial(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border, width: 1),
+        ),
+        child: Row(
+          children: [
+            // Type icon
+            Container(
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                color: typeColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(typeIcon, color: typeColor, size: 24),
+            ),
+            const SizedBox(width: 14),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        subject,
+                        style: GoogleFonts.poppins(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (sizeText.isNotEmpty) ...[
+                        const Text(' • ', style: TextStyle(color: AppColors.textMuted)),
+                        Text(
+                          sizeText,
+                          style: GoogleFonts.poppins(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-              alignment: Alignment.center,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Symbols.upload, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text('Upload Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
-              ]),
             ),
-          ),
+            // Arrow icon
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.textMuted,
+              size: 16,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
