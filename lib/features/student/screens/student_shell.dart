@@ -61,7 +61,35 @@ class StudentDashboard extends StatelessWidget {
               Text(_getGreeting(), style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
             ]),
-            GradientAvatar(initials: user.avatarInitials, radius: 22, fontSize: 16),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                GradientAvatar(initials: user.avatarInitials, radius: 22, fontSize: 16),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.bg, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'S',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ]).animate().fadeIn(duration: 400.ms),
           const SizedBox(height: 20),
           Row(children: [
@@ -105,7 +133,11 @@ class StudentDashboard extends StatelessWidget {
             ),
           ).animate().fadeIn(delay: 200.ms).slideX(begin: 0.1, end: 0),
           const SizedBox(height: 24),
-          SectionHeader(title: 'My Classes', action: 'See All'),
+          SectionHeader(
+            title: 'My Classes',
+            action: 'See All',
+            onAction: () => onTabChange?.call(1),
+          ),
           const SizedBox(height: 12),
           if (classes.isEmpty)
             Center(child: Text('Join a class to get started!', style: GoogleFonts.poppins(color: AppColors.textSecondary)))
@@ -121,7 +153,11 @@ class StudentDashboard extends StatelessWidget {
               );
             }),
           const SizedBox(height: 24),
-          SectionHeader(title: 'Upcoming Tests', action: 'See All'),
+          SectionHeader(
+            title: 'Upcoming Tests',
+            action: 'See All',
+            onAction: () => onTabChange?.call(3),
+          ),
           const SizedBox(height: 12),
           if (tests.isEmpty)
             Text('No upcoming tests', style: GoogleFonts.poppins(color: AppColors.textSecondary))
