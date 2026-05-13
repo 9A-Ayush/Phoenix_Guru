@@ -35,19 +35,19 @@ class TeacherShell extends StatefulWidget {
 class _TeacherShellState extends State<TeacherShell> {
   int _index = 0;
 
-  late final List<Widget> _pages = [
-    const TeacherDashboard(),
-    const TeacherClassesPage(),
-    const TeacherTestsPage(),
-    const TeacherQuizPage(),
-    const TeacherProfilePage(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      TeacherDashboard(onNavigateToTab: (index) => setState(() => _index = index)),
+      const TeacherClassesPage(),
+      const TeacherTestsPage(),
+      const TeacherQuizPage(),
+      const TeacherProfilePage(),
+    ];
+
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: IndexedStack(index: _index, children: _pages),
+      body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: TeacherTabBar(currentIndex: _index, onTap: (i) => setState(() => _index = i)),
     );
   }
@@ -66,7 +66,9 @@ String _getGreeting() {
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 class TeacherDashboard extends StatelessWidget {
-  const TeacherDashboard({super.key});
+  final void Function(int) onNavigateToTab;
+  
+  const TeacherDashboard({super.key, required this.onNavigateToTab});
 
   @override
   Widget build(BuildContext context) {
@@ -91,19 +93,35 @@ class TeacherDashboard extends StatelessWidget {
               Text(_getGreeting(), style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
               Text(user.name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
             ]),
-            Row(children: [
-              GradientAvatar(initials: user.avatarInitials, radius: 22, fontSize: 16),
-              const SizedBox(width: 8),
-              Container(
-                height: 28, padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
-                child: Row(children: [
-                  const Icon(Symbols.school, color: AppColors.primary, size: 14),
-                  const SizedBox(width: 6),
-                  Text('Teacher', style: GoogleFonts.poppins(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
-                ]),
-              ),
-            ]),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                GradientAvatar(initials: user.avatarInitials, radius: 22, fontSize: 16),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.bg, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'T',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ]).animate().fadeIn(duration: 400.ms),
 
           const SizedBox(height: 20),
@@ -128,12 +146,17 @@ class TeacherDashboard extends StatelessWidget {
               _quickAction(context, Symbols.edit_note, 'New Test', AppColors.warningLight, AppColors.warning,
                   () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTestScreen()))),
               const SizedBox(width: 12),
-              _quickAction(context, Symbols.live_tv, 'Start Quiz', AppColors.successLight, AppColors.success, () {}),
+              _quickAction(context, Symbols.live_tv, 'Start Quiz', AppColors.successLight, AppColors.success,
+                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateQuizScreen()))),
             ]),
           ).animate().fadeIn(delay: 200.ms),
 
           const SizedBox(height: 24),
-          SectionHeader(title: 'My Classes', action: 'See All'),
+          SectionHeader(
+            title: 'My Classes',
+            action: 'See All',
+            onAction: () => onNavigateToTab(1),
+          ),
           const SizedBox(height: 12),
           if (classes.isEmpty)
             _EmptyState(
