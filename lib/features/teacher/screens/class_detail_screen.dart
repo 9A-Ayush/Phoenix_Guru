@@ -1566,88 +1566,89 @@ class _EditMaterialSheetState extends State<_EditMaterialSheet> {
     final isLink = type == 'link';
 
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: const BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Edit Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(8),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Edit Material', style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 18),
                   ),
-                  child: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 18),
                 ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Name field
+            Text('Name', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameCtrl,
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Material name',
+                hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Name field
-          Text('Name', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _nameCtrl,
-            style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'Material name',
-              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          // Subject field
-          Text('Subject', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _subjectCtrl,
-            style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'Subject',
-              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Description field
-          Text('Description', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _descCtrl,
-            style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Description (optional)',
-              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-          ),
-
-          // URL field (only for links)
-          if (isLink) ...[
             const SizedBox(height: 16),
+
+            // Subject field
+            Text('Subject', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _subjectCtrl,
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Subject',
+                hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Description field
+            Text('Description', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _descCtrl,
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Description (optional)',
+                hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+
+            // URL field (only for links)
+            if (isLink) ...[
+              const SizedBox(height: 16),
             Text('URL', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             TextField(
@@ -1688,6 +1689,7 @@ class _EditMaterialSheetState extends State<_EditMaterialSheet> {
           ),
         ],
       ),
+    ),
     );
   }
 }
