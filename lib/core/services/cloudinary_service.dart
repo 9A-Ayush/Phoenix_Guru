@@ -253,19 +253,28 @@ class CloudinaryService {
     final multipartFile = await http.MultipartFile.fromPath('file', file.path);
     request.files.add(multipartFile);
 
-    // Send with progress tracking
+    // Show initial progress
+    if (onProgress != null) {
+      onProgress(0.1); // Show 10% to indicate upload started
+    }
+
+    // Send request
     final streamedResponse = await request.send();
 
-    // Convert stream to bytes while tracking progress
+    // Show upload complete, processing response
+    if (onProgress != null) {
+      onProgress(0.8); // Show 80% to indicate upload complete, processing response
+    }
+
+    // Convert stream to bytes
     final List<int> bytes = [];
-    int bytesReceived = 0;
-    
     await for (final chunk in streamedResponse.stream) {
       bytes.addAll(chunk);
-      bytesReceived += chunk.length;
-      if (onProgress != null) {
-        onProgress(bytesReceived / fileBytes);
-      }
+    }
+
+    // Show complete
+    if (onProgress != null) {
+      onProgress(1.0); // 100% complete
     }
 
     // Build response from collected bytes
