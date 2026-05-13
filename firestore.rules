@@ -21,6 +21,21 @@ service cloud.firestore {
                     );
       allow delete: if request.auth != null
                     && resource.data.teacherId == request.auth.uid;
+
+      // ── Materials (subcollection under classes) ───────────────────────────
+      match /materials/{materialId} {
+        // Any authenticated user can read materials
+        allow read: if request.auth != null;
+        // Only the class teacher can create/delete materials
+        allow create: if request.auth != null
+                      && get(/databases/$(database)/documents/classes/$(classId))
+                         .data.teacherId == request.auth.uid;
+        allow delete: if request.auth != null
+                      && get(/databases/$(database)/documents/classes/$(classId))
+                         .data.teacherId == request.auth.uid;
+        // No updates — materials are immutable after upload
+        allow update: if false;
+      }
     }
 
     // ── Tests ──────────────────────────────────────────────────────────────
@@ -94,21 +109,6 @@ service cloud.firestore {
                     && request.resource.data.participantId == request.auth.uid;
       // No updates or deletes — answers are immutable
       allow update, delete: if false;
-    }
-
-    // ── Materials (subcollection under classes) ─────────────────────────────
-    match /classes/{classId}/materials/{materialId} {
-      // Any authenticated user can read materials
-      allow read: if request.auth != null;
-      // Only the class teacher can create/delete materials
-      allow create: if request.auth != null
-                    && get(/databases/$(database)/documents/classes/$(classId))
-                       .data.teacherId == request.auth.uid;
-      allow delete: if request.auth != null
-                    && get(/databases/$(database)/documents/classes/$(classId))
-                       .data.teacherId == request.auth.uid;
-      // No updates — materials are immutable after upload
-      allow update: if false;
     }
 
     // ── Upload Tracker (subcollection under users) ──────────────────────────
