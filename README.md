@@ -9,6 +9,16 @@ A full-stack Flutter education platform for teachers and students, featuring liv
 ## Recent Changes
 
 ### May 13, 2026
+- **Feedback & Support System** — W3-compliant feedback form for both teachers and students:
+  - Submit bug reports, feature requests, and general feedback
+  - Rate limiting: 3 submissions per day per user
+  - Real-time submission counter showing remaining submissions
+  - Form validation with character limits (subject: 100, description: 1000)
+  - Optional fields: category, priority level
+  - Success dialog with ticket ID for tracking
+  - Separate help & support screens for teachers and students
+  - Firestore security rules for feedback collection and daily trackers
+  - Accessible form design with proper ARIA labels and keyboard navigation
 - **Material Management** — Full CRUD operations for materials:
   - Edit material metadata (name, subject, description, URL for links)
   - Delete materials with confirmation dialog
@@ -48,20 +58,22 @@ A full-stack Flutter education platform for teachers and students, featuring liv
 lib/
 ├── main.dart
 ├── core/
-│   ├── models.dart                        # All data models
+│   ├── models.dart                        # All data models (includes FeedbackModel)
 │   ├── providers/
 │   │   └── app_state.dart                 # Central ChangeNotifier — auth, data, Firestore ops
 │   ├── services/
 │   │   ├── cloudinary_service.dart        # Material upload/delete/edit to Cloudinary (unsigned)
 │   │   ├── quiz_service.dart              # Isolated Firestore logic for live quiz sessions
-│   │   └── rate_limiter.dart              # In-memory client-side rate limiter (singleton)
+│   │   ├── rate_limiter.dart              # In-memory client-side rate limiter (singleton)
+│   │   └── feedback_service.dart          # Feedback submission with daily rate limiting
 │   └── theme/
 │       └── app_theme.dart                 # AppColors + AppTheme (dark)
 ├── shared/
 │   └── widgets/
-│       └── widgets.dart                   # AppInput, AppButton, GoogleSignInButton,
-│                                          # GradientAvatar, GlowBg, ClassListTile,
-│                                          # StatCard, StudentTabBar, TeacherTabBar, etc.
+│       ├── widgets.dart                   # AppInput, AppButton, GoogleSignInButton,
+│       │                                  # GradientAvatar, GlowBg, ClassListTile,
+│       │                                  # StatCard, StudentTabBar, TeacherTabBar, etc.
+│       └── feedback_form_screen.dart      # W3-compliant feedback submission form
 └── features/
     ├── auth/
     │   └── screens/
@@ -72,7 +84,8 @@ lib/
     │       └── forgot_password_screen.dart
     ├── student/
     │   ├── screens/
-    │   │   └── student_shell.dart         # Dashboard · Classes · Material · Quiz · Profile
+    │   │   ├── student_shell.dart         # Dashboard · Classes · Material · Quiz · Profile
+    │   │   └── help_support_screen.dart   # Student help & support with feedback form
     │   └── quiz/
     │       ├── join_live_quiz_screen.dart # PIN entry → real Firestore session lookup
     │       ├── live_quiz_screens.dart     # ABCD answer cards · Leaderboard (podium)
@@ -93,7 +106,7 @@ lib/
             ├── edit_profile_screen.dart
             ├── change_password_screen.dart
             ├── notifications_screen.dart
-            └── help_support_screen.dart
+            └── help_support_screen.dart   # Teacher help & support with feedback form
 ```
 
 ---
@@ -146,6 +159,7 @@ All rate limits are client-side (in-memory, resets on app restart). Server-side 
 | Change Password | 2 / 1 hr | 1 hr |
 | Join Class | 3 / 5 min | 15 min |
 | Notifications save | 3s debounce | — |
+| **Feedback Submission** | **3 / day** | **Until next day** |
 
 ### Teacher Only
 | Action | Limit | Type |
@@ -243,6 +257,8 @@ All rate limits are client-side (in-memory, resets on app restart). Server-side 
 | `live_sessions` | `{sessionId}` | Session — hostId, pin, currentQuestion, status |
 | `live_sessions/{id}/participants` | `{userId}` | Score, rank, answeredCount |
 | `live_answers` | `{answerId}` | Answer — isCorrect, pointsEarned, responseMs |
+| `feedbacks` | `{feedbackId}` | Feedback — userId, type, subject, description, status |
+| `feedback_daily_trackers` | `{userId}_{date}` | Daily submission tracking — count, lastSubmissionTime |
 
 ### Scoring Formula
 ```
@@ -266,6 +282,7 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | `LiveSession` | id, testId, hostId, pin, currentQuestion, status, participantCount, isLocked |
 | `LiveParticipant` | id, sessionId, name, score, rank, answeredCount, correctCount |
 | `LiveAnswer` | id, sessionId, participantId, questionIndex, isCorrect, pointsEarned, responseMs |
+| `FeedbackModel` | id, userId, userRole, type, subject, description, priority, category, status, submittedAt |
 
 ---
 
@@ -334,7 +351,74 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | T16 | Edit Profile | Name edit → Firestore |
 | T17 | Change Password | Re-auth + Firebase Auth update |
 | T18 | Notifications | 5 toggles → Firestore (3s debounce) |
-| T19 | Help & Support | FAQ accordion + contact cards |
+| T19 | Help & Support | FAQ accordion + contact cards + feedback form |
+
+---
+
+## Feedback & Support System
+
+### Features
+- **W3-compliant form** with proper semantic HTML and ARIA labels
+- **Rate limiting**: 3 submissions per day per user (tracked in Firestore)
+- **Submission types**: Bug Report, Feature Request, General Feedback
+- **Form fields**:
+  - Subject (required, max 100 chars)
+  - Description (required, max 1000 chars)
+  - Category (optional): UI/UX, Performance, Content, Authentication, Classes, Tests & Quizzes, Live Sessions, Other
+  - Priority (optional): Low, Medium, High
+- **Real-time counter**: Shows remaining submissions (e.g., "2/3 remaining")
+- **Success dialog**: Displays ticket ID for tracking
+- **Accessible design**: Keyboard navigation, screen reader support, proper focus management
+
+### FeedbackService Methods
+| Method | Description |
+|---|---|
+| `checkDailyLimit(userId)` | Returns remaining submissions, throws if limit reached |
+| `submitFeedback(feedback)` | Saves feedback and updates daily tracker |
+| `getUserFeedbacks(userId)` | Stream of user's feedback history (last 30 days) |
+| `getTodaySubmissionCount(userId)` | Get today's submission count |
+| `getAllFeedbacks(...)` | Admin: Stream all feedbacks with filters |
+| `updateFeedback(...)` | Admin: Update status and response |
+
+### Feedback Flow
+```
+Help & Support Screen
+  ├── FAQ accordion (expandable questions)
+  ├── Submit Feedback button (highlighted with gradient)
+  │     → FeedbackFormScreen
+  │           ├── Check daily limit (3/day)
+  │           ├── Show submission counter
+  │           ├── Fill form (type, subject, description, category, priority)
+  │           ├── Validate inputs
+  │           ├── Submit → FeedbackService.submitFeedback()
+  │           ├── Update daily tracker
+  │           └── Show success dialog with ticket ID
+  │
+  ├── Email Support card
+  └── Live Chat card
+```
+
+### Firestore Security Rules
+```javascript
+// Users can read their own feedback, teachers can read all
+match /feedbacks/{feedbackId} {
+  allow read: if request.auth != null && (
+    resource.data.userId == request.auth.uid ||
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+  );
+  allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+  allow update: if request.auth != null && 
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+}
+
+// Daily trackers for rate limiting
+match /feedback_daily_trackers/{trackerId} {
+  allow read: if request.auth != null && trackerId.matches('^' + request.auth.uid + '_.*');
+  allow create, update: if request.auth != null && 
+    trackerId.matches('^' + request.auth.uid + '_.*') &&
+    request.resource.data.userId == request.auth.uid;
+}
+```
 
 ---
 
