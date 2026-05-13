@@ -47,7 +47,8 @@ class StudentDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final user = state.currentUser!;
+    final user = state.currentUser;
+    if (user == null) return const SizedBox.shrink();
     final classes = state.myClasses;
     final tests = state.allTests;
     return SafeArea(

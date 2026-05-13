@@ -71,7 +71,11 @@ class TeacherDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final user = state.currentUser!;
+    final user = state.currentUser;
+
+    // Guard against null during logout transition
+    if (user == null) return const SizedBox.shrink();
+
     final classes = state.myClasses;
     final tests = state.allTests;
 
@@ -1345,7 +1349,11 @@ class TeacherProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final user = state.currentUser!;
+    final user = state.currentUser;
+
+    // Guard against null during logout transition
+    if (user == null) return const SizedBox.shrink();
+
     final classes = state.myClasses;
     final tests = state.allTests;
 
