@@ -1094,16 +1094,5 @@ class _BottomBar extends StatelessWidget {
     );
   }
 }
-              if (!isLoading) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.upload_rounded, color: Colors.white, size: 18),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // end of file
