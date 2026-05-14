@@ -12,6 +12,7 @@ import '../../teacher/screens/edit_profile_screen.dart';
 import '../../teacher/screens/notifications_screen.dart';
 import 'help_support_screen.dart';
 import 'student_results_screen.dart';
+import 'material_cache_manager_screen.dart';
 
 // ── Profile Page ──────────────────────────────────────────────────────────────
 class StudentProfilePage extends StatelessWidget {
@@ -151,6 +152,15 @@ class StudentProfilePage extends StatelessWidget {
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const StudentResultsScreen())),
+            ),
+            const SizedBox(height: 10),
+            MenuRow(
+              icon: Symbols.storage,
+              iconColor: const Color(0xFF8B5CF6),
+              label: 'Offline Storage',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const MaterialCacheManagerScreen())),
             ),
             const SizedBox(height: 10),
             MenuRow(

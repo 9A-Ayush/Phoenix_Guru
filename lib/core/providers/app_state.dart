@@ -11,6 +11,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:uuid/uuid.dart';
 import '../models.dart';
 import '../services/rate_limiter.dart';
+import '../services/material_cache_service.dart';
 
 const _uuid = Uuid();
 
@@ -103,6 +104,9 @@ class AppState extends ChangeNotifier {
         if (loaded) {
           _authStatus = AuthStatus.authenticated;
           _initStreams();
+          
+          // Validate material cache on app start
+          _validateMaterialCache();
         } else {
           // Profile doc missing in Firestore — sign out the orphan session.
           await _auth.signOut();
@@ -1097,6 +1101,21 @@ class AppState extends ChangeNotifier {
           .toList();
       notifyListeners();
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // MATERIAL CACHE VALIDATION
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Validate material cache on app start (remove invalid entries)
+  Future<void> _validateMaterialCache() async {
+    try {
+      final cacheService = MaterialCacheService();
+      await cacheService.validateCache();
+      debugPrint('Material cache validated successfully');
+    } catch (e) {
+      debugPrint('Failed to validate material cache: $e');
+    }
   }
 
   @override

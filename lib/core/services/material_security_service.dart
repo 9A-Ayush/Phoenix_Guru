@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:screen_protector/screen_protector.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,10 +20,10 @@ class MaterialSecurityService {
 
     try {
       if (Platform.isAndroid) {
-        // Android: Use flutter_windowmanager
-        await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+        // Android: Prevent screenshots and screen recording
+        await ScreenProtector.protectDataLeakageWithBlur();
       } else if (Platform.isIOS) {
-        // iOS: Use screen_protector
+        // iOS: Prevent screenshots
         await ScreenProtector.protectDataLeakageOn();
       }
       _isSecured = true;
@@ -38,9 +37,7 @@ class MaterialSecurityService {
     if (!_isSecured) return;
 
     try {
-      if (Platform.isAndroid) {
-        await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
-      } else if (Platform.isIOS) {
+      if (Platform.isAndroid || Platform.isIOS) {
         await ScreenProtector.protectDataLeakageOff();
       }
       _isSecured = false;

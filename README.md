@@ -46,7 +46,52 @@ The teacher module is fully functional and production-ready with all core featur
 
 ## Recent Changes
 
-### May 14, 2026 (Latest)
+### May 14, 2026 (Latest) - Material Module Complete Upgrade ✅
+- **Secure In-App Material Viewing** — Complete refactor of student materials module:
+  - **Phase 1 - Core Services**:
+    - `MaterialCacheService`: Offline storage, download management, cache metadata, position tracking
+    - `ConnectivityService`: Real-time network monitoring with stream-based updates
+    - `MaterialSecurityService`: Screenshot/screen recording blocking using `screen_protector`
+  - **Phase 2 - Secure Viewers**:
+    - `SecurePDFViewer`: Syncfusion PDF viewer with page tracking, offline support, screenshot blocking
+    - `SecureImageViewer`: PhotoView with zoom/pan controls, screenshot blocking
+    - `SecureDocumentViewer`: WebView for DOC/PPT files using Google Docs Viewer
+    - All viewers block screenshots and screen recording
+  - **Phase 3 - Enhanced Material List UI**:
+    - Integrated all secure viewers (no external browser for materials)
+    - Offline badges on cached materials (green "Offline" indicator)
+    - Continue Reading section showing last 3 accessed materials with progress
+    - Recent Materials horizontal carousel with last viewed position
+    - Shimmer loading states for better UX
+    - Pull-to-refresh functionality
+    - Offline status indicator in header
+    - Real-time connectivity monitoring
+  - **Phase 4 - Offline & Caching**:
+    - Auto-download materials after first view (background)
+    - `MaterialCacheManagerScreen`: Full cache management interface
+    - View all cached materials with storage usage
+    - Delete individual materials (swipe or button)
+    - Clear old cache (30+ days)
+    - Clear all cache option
+    - Cache validation on app startup
+    - Storage size tracking in MB/GB
+  - **Phase 5 - Security Hardening**:
+    - Screenshot blocking (Android & iOS)
+    - Screen recording prevention (Android)
+    - No external browser for materials (except external links)
+    - External links show warning dialog
+    - Secure in-app viewing only
+  - **Phase 6 - Testing & Polish**:
+    - Smooth animations with flutter_animate
+    - Responsive shimmer loading
+    - Error handling with retry mechanisms
+    - Memory-efficient caching
+    - Clean UI/UX throughout
+- **New Dependencies**: `syncfusion_flutter_pdfviewer`, `photo_view`, `webview_flutter`, `screen_protector`, `dio`, `connectivity_plus`
+- **Profile Integration**: Added "Offline Storage" option in student profile menu
+- **Supported Material Types**: PDF (Syncfusion), Image (PhotoView), DOC/PPT (Google Docs Viewer), Links (warning dialog)
+
+### May 14, 2026 (Earlier)
 - **Student Results Screen** — New comprehensive results screen accessible from student profile:
   - **Dual View**: Toggle between Live Quizzes and Tests results with filter tabs
   - **Performance Stats**: Shows total attempts, average score, and best rank for selected category
@@ -160,7 +205,10 @@ lib/
 │   │   ├── cloudinary_service.dart        # Material upload/delete/edit to Cloudinary (unsigned)
 │   │   ├── quiz_service.dart              # Isolated Firestore logic for live quiz sessions
 │   │   ├── rate_limiter.dart              # In-memory client-side rate limiter (singleton)
-│   │   └── feedback_service.dart          # Feedback submission with daily rate limiting
+│   │   ├── feedback_service.dart          # Feedback submission with daily rate limiting
+│   │   ├── material_cache_service.dart    # Offline storage, download, cache management
+│   │   ├── connectivity_service.dart      # Real-time network monitoring
+│   │   └── material_security_service.dart # Screenshot/recording blocking
 │   └── theme/
 │       └── app_theme.dart                 # AppColors + AppTheme (dark)
 ├── shared/
@@ -180,7 +228,16 @@ lib/
     ├── student/
     │   ├── screens/
     │   │   ├── student_shell.dart         # Dashboard · Classes · Material · Quiz · Profile
+    │   │   ├── student_material_page.dart # Secure material viewer with offline support
+    │   │   ├── student_class_detail_screen.dart # Members, Tests, Materials tabs
+    │   │   ├── student_test_detail_screen.dart  # Test info, attempts, smart locking
+    │   │   ├── student_results_screen.dart      # Dual view results (quizzes/tests)
+    │   │   ├── material_cache_manager_screen.dart # Cache management UI
     │   │   └── help_support_screen.dart   # Student help & support with feedback form
+    │   ├── viewers/
+    │   │   ├── secure_pdf_viewer.dart     # Syncfusion PDF viewer with security
+    │   │   ├── secure_image_viewer.dart   # PhotoView with zoom and security
+    │   │   └── secure_document_viewer.dart # WebView for DOC/PPT files
     │   └── quiz/
     │       ├── join_live_quiz_screen.dart # PIN entry → real Firestore session lookup
     │       ├── live_quiz_screens.dart     # ABCD answer cards · Leaderboard (podium)
@@ -417,16 +474,20 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | 06 | Dashboard | Live quiz banner, stats, classes |
 | 07 | My Classes | List + join class sheet (6-digit OTP) |
 | 08 | Class Detail | 3 tabs: Members, Tests, Materials (read-only) |
-| 09 | Study Material | Filter tabs, files |
-| 10 | Tests | Upcoming/done tabs, tap → test detail |
-| 11 | Test Detail | Comprehensive test info, attempts tracking, smart locking |
-| 12 | Join Live Quiz | Real PIN → Firestore session lookup |
-| 13 | Live Quiz ABCD | Answer cards, countdown timer |
-| 14 | Test Taking | Progress bar, MCQ, anti-cheat |
-| 15 | Profile | Stats, Edit Profile, My Results, Notifications, Help |
-| 16 | My Results | Dual view (quizzes/tests), stats, detailed result cards |
-| 17 | Quiz Leaderboard | Podium UI |
-| 18 | Quiz Results List | Grade badges, real Firestore data |
+| 09 | Study Material | Secure in-app viewers, offline support, continue reading |
+| 10 | Material Cache Manager | View/delete cached materials, storage management |
+| 11 | Secure PDF Viewer | Syncfusion viewer, page tracking, screenshot blocking |
+| 12 | Secure Image Viewer | PhotoView with zoom, screenshot blocking |
+| 13 | Secure Document Viewer | WebView for DOC/PPT files |
+| 14 | Tests | Upcoming/done tabs, tap → test detail |
+| 15 | Test Detail | Comprehensive test info, attempts tracking, smart locking |
+| 16 | Join Live Quiz | Real PIN → Firestore session lookup |
+| 17 | Live Quiz ABCD | Answer cards, countdown timer |
+| 18 | Test Taking | Progress bar, MCQ, anti-cheat |
+| 19 | Profile | Stats, Edit Profile, My Results, Offline Storage, Notifications, Help |
+| 20 | My Results | Dual view (quizzes/tests), stats, detailed result cards |
+| 21 | Quiz Leaderboard | Podium UI |
+| 22 | Quiz Results List | Grade badges, real Firestore data |
 
 ### Teacher Module
 | # | Screen | Notes |
@@ -589,6 +650,14 @@ flutter run
 | `material_symbols_icons` | ^4.2792.2 | Icon set |
 | `uuid` | ^4.4.2 | ID generation |
 | `intl` | ^0.19.0 | Date formatting |
+| **Material Viewer Dependencies** | | |
+| `syncfusion_flutter_pdfviewer` | ^27.2.5 | Advanced PDF viewing |
+| `photo_view` | ^0.15.0 | Image viewing with zoom |
+| `webview_flutter` | ^4.10.0 | WebView for documents |
+| `screen_protector` | ^1.4.2 | Screenshot/recording blocking |
+| `dio` | ^5.7.0 | Advanced HTTP client |
+| `connectivity_plus` | ^6.1.2 | Network detection |
+| `path_provider` | ^2.1.5 | Local storage paths |
 
 ---
 
