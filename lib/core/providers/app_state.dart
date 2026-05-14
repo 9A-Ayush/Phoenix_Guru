@@ -908,33 +908,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  @override
-  void dispose() {
-    _cancelStreams();
-    super.dispose();
-  }
-}
-
   // ── Payment Management ────────────────────────────────────────────────────
 
-  /// Update payment status for a student
+  /// Update payment status for a student (persisted to Firestore)
   Future<void> updatePaymentStatus(String paymentId, PaymentStatus newStatus) async {
     try {
       final updateData = <String, dynamic>{
         'status': newStatus.name,
       };
-      
       if (newStatus == PaymentStatus.paid) {
         updateData['paidDate'] = DateTime.now().toIso8601String();
+      } else {
+        updateData['paidDate'] = null;
       }
-      
       await _firestore.collection('payments').doc(paymentId).update(updateData);
     } catch (e) {
       debugPrint('Error updating payment status: $e');
     }
   }
 
-  /// Create a payment record for a student
+  /// Create a payment record for a student (persisted to Firestore)
   Future<void> createPayment({
     required String studentId,
     required String studentName,
@@ -954,32 +947,35 @@ class AppState extends ChangeNotifier {
         amount: amount,
         dueDate: dueDate,
       );
-      
       await _firestore.collection('payments').doc(payment.id).set(payment.toMap());
     } catch (e) {
       debugPrint('Error creating payment: $e');
     }
   }
 
-  /// Initialize payment stream
+  /// Initialize real-time payment stream from Firestore
   void _initPaymentStream() {
     if (_currentUser == null) return;
-    
     _paymentsSub?.cancel();
-    
+
     Query query = _firestore.collection('payments');
-    
-    // Teachers see all payments for their students
-    // Students see only their own payment
+
+    // Students only see their own payment record
     if (isStudent) {
       query = query.where('studentId', isEqualTo: _currentUser!.id);
     }
-    
+
     _paymentsSub = query.snapshots().listen((snap) {
       _payments = snap.docs
           .map((doc) => StudentPayment.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
       notifyListeners();
     });
+  }
+
+  @override
+  void dispose() {
+    _cancelStreams();
+    super.dispose();
   }
 }
