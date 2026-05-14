@@ -68,6 +68,7 @@ gemini_config.json
 # Documentation files (keep local only)
 *.md
 *.txt
+*.pdf
 !README.md
 
 # Firebase config files — contain API keys, keep local only
