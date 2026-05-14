@@ -20,6 +20,7 @@ class StudentDashboard extends StatelessWidget {
     if (user == null) return const SizedBox.shrink();
     final classes = state.myClasses;
     final tests = state.allTests;
+    final payment = state.getStudentPayment(user.id);
 
     return SafeArea(
       bottom: false,
@@ -83,9 +84,15 @@ class StudentDashboard extends StatelessWidget {
             const SizedBox(width: 12),
             StatCard(
                 icon: Symbols.payments,
-                value: 'Paid',
+                value: payment?.statusLabel ?? 'N/A',
                 label: 'Fee',
-                iconColor: AppColors.success),
+                iconColor: payment == null
+                    ? AppColors.textMuted
+                    : payment.isPaid
+                        ? AppColors.success
+                        : payment.isOverdue
+                            ? AppColors.error
+                            : AppColors.warning),
           ]).animate().fadeIn(delay: 100.ms),
 
           const SizedBox(height: 20),

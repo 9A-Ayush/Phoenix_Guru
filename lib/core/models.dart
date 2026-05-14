@@ -611,3 +611,97 @@ class FeedbackModel {
     );
   }
 }
+
+// ── Payment Tracking ──────────────────────────────────────────────────────────
+
+enum PaymentStatus { paid, due, overdue }
+
+class StudentPayment {
+  final String id;
+  final String studentId;
+  final String studentName;
+  final String classId;
+  final String className;
+  final PaymentStatus status;
+  final double amount;
+  final DateTime dueDate;
+  final DateTime? paidDate;
+  final String? notes;
+
+  StudentPayment({
+    String? id,
+    required this.studentId,
+    required this.studentName,
+    required this.classId,
+    required this.className,
+    required this.status,
+    required this.amount,
+    required this.dueDate,
+    this.paidDate,
+    this.notes,
+  }) : id = id ?? _uuid.v4();
+
+  bool get isPaid => status == PaymentStatus.paid;
+  bool get isDue => status == PaymentStatus.due;
+  bool get isOverdue => status == PaymentStatus.overdue;
+
+  String get statusLabel {
+    switch (status) {
+      case PaymentStatus.paid:
+        return 'Paid';
+      case PaymentStatus.due:
+        return 'Due';
+      case PaymentStatus.overdue:
+        return 'Overdue';
+    }
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'studentId': studentId,
+      'studentName': studentName,
+      'classId': classId,
+      'className': className,
+      'status': status.name,
+      'amount': amount,
+      'dueDate': dueDate.toIso8601String(),
+      'paidDate': paidDate?.toIso8601String(),
+      'notes': notes,
+    };
+  }
+
+  factory StudentPayment.fromMap(Map<String, dynamic> map) {
+    return StudentPayment(
+      id: map['id'],
+      studentId: map['studentId'],
+      studentName: map['studentName'],
+      classId: map['classId'],
+      className: map['className'],
+      status: PaymentStatus.values.byName(map['status']),
+      amount: (map['amount'] as num).toDouble(),
+      dueDate: DateTime.parse(map['dueDate']),
+      paidDate: map['paidDate'] != null ? DateTime.parse(map['paidDate']) : null,
+      notes: map['notes'],
+    );
+  }
+
+  StudentPayment copyWith({
+    PaymentStatus? status,
+    DateTime? paidDate,
+    String? notes,
+  }) {
+    return StudentPayment(
+      id: id,
+      studentId: studentId,
+      studentName: studentName,
+      classId: classId,
+      className: className,
+      status: status ?? this.status,
+      amount: amount,
+      dueDate: dueDate,
+      paidDate: paidDate ?? this.paidDate,
+      notes: notes ?? this.notes,
+    );
+  }
+}

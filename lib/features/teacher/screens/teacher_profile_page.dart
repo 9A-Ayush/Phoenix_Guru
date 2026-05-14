@@ -11,6 +11,7 @@ import 'edit_profile_screen.dart';
 import 'material_upload_screen.dart';
 import 'notifications_screen.dart';
 import 'help_support_screen.dart';
+import 'payment_management_screen.dart';
 
 // ── Profile Page ──────────────────────────────────────────────────────────────
 
@@ -137,8 +138,17 @@ class TeacherProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             MenuRow(
-              icon: Symbols.notifications,
+              icon: Symbols.payments,
               iconColor: AppColors.warning,
+              label: 'Payment Management',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const PaymentManagementScreen())),
+            ),
+            const SizedBox(height: 10),
+            MenuRow(
+              icon: Symbols.notifications,
+              iconColor: AppColors.primary,
               label: 'Notifications',
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(

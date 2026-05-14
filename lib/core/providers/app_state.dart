@@ -37,9 +37,11 @@ class AppState extends ChangeNotifier {
   List<ClassModel> _classes = [];
   List<TestModel> _tests = [];
   List<QuizAttempt> _attempts = [];
+  List<StudentPayment> _payments = [];
   StreamSubscription? _classesSub;
   StreamSubscription? _testsSub;
   StreamSubscription? _attemptsSub;
+  StreamSubscription? _paymentsSub;
 
   // ── Getters ───────────────────────────────────────────────────────────────
   AuthStatus get authStatus => _authStatus;
@@ -67,6 +69,15 @@ class AppState extends ChangeNotifier {
   List<TestModel> testsForClass(String classId) => _tests.where((t) => t.classId == classId).toList();
   List<QuizAttempt> get myAttempts => _currentUser == null ? [] : _attempts.where((a) => a.userId == _currentUser!.id).toList();
   List<QuizAttempt> attemptsForTest(String testId) => _attempts.where((a) => a.testId == testId).toList();
+  
+  List<StudentPayment> get allPayments => List.unmodifiable(_payments);
+  StudentPayment? getStudentPayment(String studentId) {
+    try {
+      return _payments.firstWhere((p) => p.studentId == studentId);
+    } catch (e) {
+      return null;
+    }
+  }
 
   // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -193,15 +204,19 @@ class AppState extends ChangeNotifier {
       _attempts = snapshot.docs.map((doc) => QuizAttempt.fromMap(doc.data())).toList();
       notifyListeners();
     });
+    
+    _initPaymentStream();
   }
 
   void _cancelStreams() {
     _classesSub?.cancel();
     _testsSub?.cancel();
     _attemptsSub?.cancel();
+    _paymentsSub?.cancel();
     _classesSub = null;
     _testsSub = null;
     _attemptsSub = null;
+    _paymentsSub = null;
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -897,5 +912,74 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _cancelStreams();
     super.dispose();
+  }
+}
+
+  // ── Payment Management ────────────────────────────────────────────────────
+
+  /// Update payment status for a student
+  Future<void> updatePaymentStatus(String paymentId, PaymentStatus newStatus) async {
+    try {
+      final updateData = <String, dynamic>{
+        'status': newStatus.name,
+      };
+      
+      if (newStatus == PaymentStatus.paid) {
+        updateData['paidDate'] = DateTime.now().toIso8601String();
+      }
+      
+      await _firestore.collection('payments').doc(paymentId).update(updateData);
+    } catch (e) {
+      debugPrint('Error updating payment status: $e');
+    }
+  }
+
+  /// Create a payment record for a student
+  Future<void> createPayment({
+    required String studentId,
+    required String studentName,
+    required String classId,
+    required String className,
+    required double amount,
+    required DateTime dueDate,
+    PaymentStatus status = PaymentStatus.due,
+  }) async {
+    try {
+      final payment = StudentPayment(
+        studentId: studentId,
+        studentName: studentName,
+        classId: classId,
+        className: className,
+        status: status,
+        amount: amount,
+        dueDate: dueDate,
+      );
+      
+      await _firestore.collection('payments').doc(payment.id).set(payment.toMap());
+    } catch (e) {
+      debugPrint('Error creating payment: $e');
+    }
+  }
+
+  /// Initialize payment stream
+  void _initPaymentStream() {
+    if (_currentUser == null) return;
+    
+    _paymentsSub?.cancel();
+    
+    Query query = _firestore.collection('payments');
+    
+    // Teachers see all payments for their students
+    // Students see only their own payment
+    if (isStudent) {
+      query = query.where('studentId', isEqualTo: _currentUser!.id);
+    }
+    
+    _paymentsSub = query.snapshots().listen((snap) {
+      _payments = snap.docs
+          .map((doc) => StudentPayment.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+      notifyListeners();
+    });
   }
 }
