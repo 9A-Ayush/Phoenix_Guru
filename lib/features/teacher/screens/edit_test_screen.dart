@@ -44,50 +44,42 @@ class _EditTestScreenState extends State<EditTestScreen> {
     super.dispose();
   }
 
-  String _formatDateTime(DateTime d) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final hour = d.hour == 0 ? 12 : (d.hour > 12 ? d.hour - 12 : d.hour);
-    final amPm = d.hour >= 12 ? 'PM' : 'AM';
-    final minute = d.minute.toString().padLeft(2, '0');
-    return '${d.day} ${months[d.month - 1]} ${d.year}, $hour:$minute $amPm';
-  }
+  // ── Date + time picker ────────────────────────────────────────────────────
+
+  ThemeData get _calendarTheme => ThemeData.dark().copyWith(
+    colorScheme: const ColorScheme.dark(
+      primary: Color(0xFF5B2FD4),
+      onPrimary: Colors.white,
+      surface: Color(0xFF0A0A0A),
+      onSurface: Colors.white,
+      secondary: Color(0xFF5B2FD4),
+      onSecondary: Colors.white,
+    ),
+    dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0A0A0A)),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: const Color(0xFF5B2FD4),
+        textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
+    ),
+    textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+  );
 
   Future<void> _pickDateTime() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
-    final themeBuilder = (BuildContext context, Widget? child) => Theme(
-      data: ThemeData.dark().copyWith(
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF5B2FD4),
-          onPrimary: Colors.white,
-          surface: Color(0xFF0A0A0A),
-          onSurface: Colors.white,
-        ),
-        dialogTheme: const DialogThemeData(
-          backgroundColor: Color(0xFF0A0A0A),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF5B2FD4),
-            textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
-      child: child!,
-    );
 
+    // Step 1 — pick date
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _expiresAt != null && _expiresAt!.isAfter(today)
-          ? _expiresAt!
-          : today.add(const Duration(days: 1)),
+      initialDate: _expiresAt ?? today.add(const Duration(days: 1)),
       firstDate: today.add(const Duration(days: 1)),
       lastDate: DateTime(now.year + 2),
-      builder: themeBuilder,
+      builder: (_, child) => Theme(data: _calendarTheme, child: child!),
     );
     if (pickedDate == null || !mounted) return;
 
+    // Step 2 — pick time
     final initialTime = _expiresAt != null
         ? TimeOfDay(hour: _expiresAt!.hour, minute: _expiresAt!.minute)
         : const TimeOfDay(hour: 23, minute: 59);
@@ -95,7 +87,7 @@ class _EditTestScreenState extends State<EditTestScreen> {
     final pickedTime = await showTimePicker(
       context: context,
       initialTime: initialTime,
-      builder: themeBuilder,
+      builder: (_, child) => Theme(data: _calendarTheme, child: child!),
     );
     if (pickedTime == null) return;
 
@@ -108,6 +100,14 @@ class _EditTestScreenState extends State<EditTestScreen> {
         pickedTime.minute,
       );
     });
+  }
+
+  String _formatDateTime(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    final h = d.hour.toString().padLeft(2, '0');
+    final m = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year}  •  $h:$m';
   }
 
   Future<void> _save() async {
