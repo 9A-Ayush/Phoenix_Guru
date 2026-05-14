@@ -617,6 +617,46 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Fetches all unique students across all of the teacher's classes.
+  /// Returns a list of (UserModel, ClassModel) pairs — one entry per
+  /// student-class combination so the teacher can track per-class fees.
+  Future<List<({UserModel student, ClassModel cls})>> fetchStudentsForTeacher() async {
+    final teacherClasses = myClasses; // already filtered to this teacher
+    if (teacherClasses.isEmpty) return [];
+
+    // Collect all unique student IDs
+    final allIds = <String>{};
+    for (final cls in teacherClasses) {
+      allIds.addAll(cls.studentIds);
+    }
+    if (allIds.isEmpty) return [];
+
+    // Batch-fetch user profiles (Firestore 'in' supports up to 30 per query)
+    final idList = allIds.toList();
+    final Map<String, UserModel> userMap = {};
+    for (int i = 0; i < idList.length; i += 30) {
+      final chunk = idList.sublist(i, (i + 30).clamp(0, idList.length));
+      final snap = await _firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      for (final doc in snap.docs) {
+        final u = UserModel.fromMap(doc.data());
+        userMap[u.id] = u;
+      }
+    }
+
+    // Build result: one entry per student per class
+    final result = <({UserModel student, ClassModel cls})>[];
+    for (final cls in teacherClasses) {
+      for (final sid in cls.studentIds) {
+        final user = userMap[sid];
+        if (user != null) result.add((student: user, cls: cls));
+      }
+    }
+    return result;
+  }
+
   Future<String?> joinClass(String code) async {
     final rl = RateLimiter.instance;
     final userId = _currentUser?.id ?? 'anon';
