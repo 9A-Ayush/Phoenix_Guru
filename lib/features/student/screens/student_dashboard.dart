@@ -38,13 +38,16 @@ class StudentDashboard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                       color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
             ]),
-            UserAvatar(
-              initials: user.avatarInitials,
-              photoUrl: user.photoUrl,
-              radius: 22,
-              fontSize: 16,
-              badgeLabel: 'S',
-              badgeColor: AppColors.success,
+            GestureDetector(
+              onTap: () => onTabChange?.call(4),
+              child: UserAvatar(
+                initials: user.avatarInitials,
+                photoUrl: user.photoUrl,
+                radius: 22,
+                fontSize: 16,
+                badgeLabel: 'S',
+                badgeColor: AppColors.success,
+              ),
             ),
           ]).animate().fadeIn(duration: 400.ms),
 

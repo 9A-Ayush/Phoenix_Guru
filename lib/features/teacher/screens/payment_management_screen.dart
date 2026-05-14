@@ -93,47 +93,63 @@ class _PaymentManagementScreenState extends State<PaymentManagementScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
+      body: Column(children: [
           // ── Header ────────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-            child: Row(children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Icon(Icons.chevron_left_rounded,
-                      color: Colors.white, size: 20),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 20, 24, 20),
+            color: AppColors.bg,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.chevron_left_rounded,
+                              color: AppColors.textSecondary, size: 18),
+                          const SizedBox(width: 6),
+                          Text('Back',
+                              style: GoogleFonts.inter(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.normal)),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _loadStudents,
+                      child: Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Icon(Symbols.refresh,
+                            color: AppColors.textMuted, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text('Payment Management',
-                    style: GoogleFonts.poppins(
+                const SizedBox(height: 18),
+                Text('Payment Management',
+                    style: GoogleFonts.inter(
                         color: Colors.white,
-                        fontSize: 17,
+                        fontSize: 26,
                         fontWeight: FontWeight.w700)),
-              ),
-              GestureDetector(
-                onTap: _loadStudents,
-                child: Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Icon(Symbols.refresh,
-                      color: AppColors.textMuted, size: 18),
-                ),
-              ),
-            ]),
+                const SizedBox(height: 4),
+                Text('Track and manage student fee payments',
+                    style: GoogleFonts.inter(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.normal)),
+              ],
+            ),
           ),
 
           Expanded(
@@ -240,7 +256,6 @@ class _PaymentManagementScreenState extends State<PaymentManagementScreen> {
                       ),
           ),
         ]),
-      ),
     );
   }
 

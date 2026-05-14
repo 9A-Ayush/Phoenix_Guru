@@ -24,9 +24,7 @@ class StudentProfilePage extends StatelessWidget {
     final user = state.currentUser!;
     final attempts = state.myAttempts;
 
-    return SafeArea(
-      bottom: false,
-      child: SingleChildScrollView(
+    return SingleChildScrollView(
         child: Column(children: [
           // ── Header ────────────────────────────────────────────────────────
           Container(
@@ -169,7 +167,6 @@ class StudentProfilePage extends StatelessWidget {
             ]),
           ),
         ]),
-      ),
     );
   }
 

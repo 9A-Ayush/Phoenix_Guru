@@ -131,42 +131,43 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 32),
+        padding: EdgeInsets.fromLTRB(hPad, MediaQuery.of(context).padding.top + 20, hPad, 32),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header ────────────────────────────────────────────────────
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Icon(Icons.chevron_left_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Text(
-                    'Submit Feedback',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.chevron_left_rounded,
+                        color: AppColors.textSecondary, size: 18),
+                    const SizedBox(width: 6),
+                    Text('Back',
+                        style: GoogleFonts.inter(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.normal)),
+                  ],
+                ),
               ),
+              const SizedBox(height: 18),
+              Text('Submit Feedback',
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('Help us improve your experience',
+                  style: GoogleFonts.inter(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.normal)),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // ── Submission counter ────────────────────────────────────────
               Container(

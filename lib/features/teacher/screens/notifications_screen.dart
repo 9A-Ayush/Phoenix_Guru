@@ -101,57 +101,74 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Column(children: [
+          // ── Header ────────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(hPad, MediaQuery.of(context).padding.top + 20, hPad, 20),
+            color: AppColors.bg,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.chevron_left_rounded,
+                              color: AppColors.textSecondary, size: 18),
+                          const SizedBox(width: 6),
+                          Text('Back',
+                              style: GoogleFonts.inter(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.normal)),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.chevron_left_rounded, color: Colors.white, size: 20),
-                  ),
+                    // Save button
+                    GestureDetector(
+                      onTap: _saving ? null : _save,
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: _saving
+                            ? const SizedBox(
+                                width: 16, height: 16,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Text('Save',
+                                style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 18),
                 Text('Notifications',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                         color: Colors.white,
-                        fontSize: 17,
+                        fontSize: 26,
                         fontWeight: FontWeight.w700)),
-                // Save button
-                GestureDetector(
-                  onTap: _saving ? null : _save,
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: _saving
-                        ? const SizedBox(width: 16, height: 16,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Save',
-                            style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
-                  ),
-                ),
+                const SizedBox(height: 4),
+                Text('Manage your notification preferences',
+                    style: GoogleFonts.inter(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.normal)),
               ],
             ),
           ),
-
-          const SizedBox(height: 20),
 
           Expanded(
             child: _loading
@@ -220,7 +237,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
           ),
         ]),
-      ),
     );
   }
 }

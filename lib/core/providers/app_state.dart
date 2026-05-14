@@ -479,9 +479,9 @@ class AppState extends ChangeNotifier {
   Future<String?> updateProfilePhoto(Uint8List imageBytes, String fileName) async {
     if (_currentUser == null) return 'Not logged in';
     try {
-      final cloudName = const String.fromEnvironment('CLOUDINARY_CLOUD_NAME',
+      const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME',
           defaultValue: 'dwv7xyucs');
-      final uploadPreset = const String.fromEnvironment('CLOUDINARY_UPLOAD_PRESET',
+      const uploadPreset = String.fromEnvironment('CLOUDINARY_UPLOAD_PRESET',
           defaultValue: 'phoenix_guru_materials');
 
       // Read from .env via flutter_dotenv if available
@@ -491,24 +491,26 @@ class AppState extends ChangeNotifier {
       final uri = Uri.parse(
           'https://api.cloudinary.com/v1_1/$envCloudName/image/upload');
 
-      // Build multipart request
+      // Determine image mime type
+      final ext = fileName.split('.').last.toLowerCase();
+      final mimeSubtype = (ext == 'jpg') ? 'jpeg' : ext;
+
+      // Build multipart request — no overwrite/public_id (requires signed upload)
       final request = http.MultipartRequest('POST', uri)
         ..fields['upload_preset'] = envPreset
-        ..fields['folder'] = 'profile_photos'
-        ..fields['public_id'] = 'user_${_currentUser!.id}'
-        ..fields['overwrite'] = 'true'
+        ..fields['folder'] = 'phoenix_guru/profile_photos'
         ..files.add(http.MultipartFile.fromBytes(
           'file',
           imageBytes,
-          filename: fileName,
-          contentType: MediaType('image', fileName.split('.').last),
+          filename: 'profile_${_currentUser!.id}_${DateTime.now().millisecondsSinceEpoch}.$ext',
+          contentType: MediaType('image', mimeSubtype),
         ));
 
       final response = await request.send();
       final body = await response.stream.bytesToString();
 
       if (response.statusCode != 200) {
-        return 'Upload failed: ${response.statusCode}';
+        return 'Upload failed: $body';
       }
 
       final json = jsonDecode(body) as Map<String, dynamic>;

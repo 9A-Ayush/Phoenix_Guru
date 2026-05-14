@@ -46,6 +46,13 @@ The teacher module is fully functional and production-ready with all core featur
 
 ## Recent Changes
 
+### May 14, 2026 (Latest)
+- **Clickable Avatar** — Tapping the avatar on Teacher and Student dashboards now navigates directly to the Profile tab (index 4)
+- **Profile Photo Upload Fix** — Removed `overwrite` and `public_id` fields from unsigned Cloudinary upload (they require signed uploads and caused 400 errors). Profile photos now upload with a unique timestamped filename
+- **Consistent Screen Headers** — Payment Management, Notifications, and Feedback screens now use the same flat header style as Upload Material (chevron + "Back" text, large title, subtitle)
+- **Smaller Role Badge** — Reduced `UserAvatar` role badge size from `radius × 0.55` to `radius × 0.40` across Teacher Dashboard, Student Dashboard, and Student Profile
+- **Student Profile SafeArea Removed** — Removed `SafeArea` wrapper from `StudentProfilePage` for consistent layout handling
+
 ### May 13, 2026 (Latest)
 - **Teacher Dashboard Improvements**:
   - Fixed "Start Quiz" button to navigate to CreateQuizScreen

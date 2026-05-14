@@ -592,7 +592,7 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = radius * 2;
-    final badgeSize = radius * 0.55;
+    final badgeSize = radius * 0.40;
 
     Widget avatar;
     if (photoUrl != null && photoUrl!.isNotEmpty) {

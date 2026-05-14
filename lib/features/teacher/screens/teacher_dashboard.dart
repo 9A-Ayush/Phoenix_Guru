@@ -48,13 +48,16 @@ class TeacherDashboard extends StatelessWidget {
                       fontSize: 20,
                       fontWeight: FontWeight.w700)),
             ]),
-            UserAvatar(
-              initials: user.avatarInitials,
-              photoUrl: user.photoUrl,
-              radius: 22,
-              fontSize: 16,
-              badgeLabel: 'T',
-              badgeColor: AppColors.primary,
+            GestureDetector(
+              onTap: () => onNavigateToTab(4),
+              child: UserAvatar(
+                initials: user.avatarInitials,
+                photoUrl: user.photoUrl,
+                radius: 22,
+                fontSize: 16,
+                badgeLabel: 'T',
+                badgeColor: AppColors.primary,
+              ),
             ),
           ]).animate().fadeIn(duration: 400.ms),
 
