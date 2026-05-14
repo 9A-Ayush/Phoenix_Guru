@@ -180,6 +180,7 @@ class AppState extends ChangeNotifier {
         _classes.clear();
         _tests.clear();
         _attempts.clear();
+        _payments.clear();
         notifyListeners();
       }
     }
@@ -412,6 +413,7 @@ class AppState extends ChangeNotifier {
     _classes.clear();
     _tests.clear();
     _attempts.clear();
+    _payments.clear();
 
     // Reset Google sign-in rate limit on clean logout.
     if (_currentUser != null) {
