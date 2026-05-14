@@ -89,6 +89,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
     // Create a temporary test doc in Firestore so the session can reference it
     final test = TestModel(
       title: _titleCtrl.text.trim(),
+      subject: 'Live Quiz',
       classId: 'live_quiz',
       className: 'Live Quiz',
       durationMinutes: (_timerSeconds * questions.length) ~/ 60 + 1,

@@ -423,12 +423,12 @@ class TestMenuSheet extends StatelessWidget {
             Navigator.pop(context);
             await Future.delayed(const Duration(milliseconds: 150));
             final err = await appState.toggleTestPublish(test.id,
-                isLive: !test.isLive);
+                isPublished: !test.isPublished);
             if (err != null) {
               _showError(err);
             } else {
               _showSuccess(
-                  test.isLive ? 'Test unpublished' : 'Test published');
+                  test.isPublished ? 'Test unpublished' : 'Test published');
             }
           },
         ),

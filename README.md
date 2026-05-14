@@ -47,6 +47,18 @@ The teacher module is fully functional and production-ready with all core featur
 ## Recent Changes
 
 ### May 14, 2026 (Latest)
+- **Student Results Screen** — New comprehensive results screen accessible from student profile:
+  - **Dual View**: Toggle between Live Quizzes and Tests results with filter tabs
+  - **Performance Stats**: Shows total attempts, average score, and best rank for selected category
+  - **Detailed Result Cards**: Each result displays grade badge, score percentage, rank, subject, test title, class name, and completion date
+  - **Color-Coded Grades**: Visual feedback with A+ (green), B (yellow), D (red) color coding
+  - **Empty States**: Helpful messages when no results are available
+  - **Smooth Animations**: Fade-in and slide effects for better UX
+- **Profile Menu Update**: Added "My Results" option in student profile menu with bar chart icon
+- **Section Rename**: Changed "My Quiz Results" to "Recent Results" to reflect both quiz and test results
+- **Bug Fixes**: Fixed compilation errors in `teacher_tests_page.dart` (isLive → isPublished) and `create_quiz_screen.dart` (added missing subject parameter)
+
+### May 14, 2026 (Earlier)
 - **Student Test Detail Screen** — New dedicated `StudentTestDetailScreen` for comprehensive test information:
   - **Test Overview**: Subject badge, availability status (Available/Completed/Expired), test title, and class name
   - **Detailed Information**: Total questions, duration, allowed attempts, attempts used, attempts remaining, scheduled date, expiry date
@@ -411,9 +423,10 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 | 12 | Join Live Quiz | Real PIN → Firestore session lookup |
 | 13 | Live Quiz ABCD | Answer cards, countdown timer |
 | 14 | Test Taking | Progress bar, MCQ, anti-cheat |
-| 15 | Profile | Stats, Edit Profile, Change Password, Notifications, Help |
-| 16 | Quiz Leaderboard | Podium UI |
-| 17 | Quiz Results List | Grade badges, real Firestore data |
+| 15 | Profile | Stats, Edit Profile, My Results, Notifications, Help |
+| 16 | My Results | Dual view (quizzes/tests), stats, detailed result cards |
+| 17 | Quiz Leaderboard | Podium UI |
+| 18 | Quiz Results List | Grade badges, real Firestore data |
 
 ### Teacher Module
 | # | Screen | Notes |

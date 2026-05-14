@@ -10,8 +10,8 @@ import '../../../shared/widgets/feedback_form_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../teacher/screens/edit_profile_screen.dart';
 import '../../teacher/screens/notifications_screen.dart';
-import '../quiz/quiz_screens.dart';
 import 'help_support_screen.dart';
+import 'student_results_screen.dart';
 
 // ── Profile Page ──────────────────────────────────────────────────────────────
 class StudentProfilePage extends StatelessWidget {
@@ -145,6 +145,15 @@ class StudentProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             MenuRow(
+              icon: Symbols.bar_chart,
+              iconColor: AppColors.success,
+              label: 'My Results',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const StudentResultsScreen())),
+            ),
+            const SizedBox(height: 10),
+            MenuRow(
               icon: Symbols.notifications,
               iconColor: AppColors.warning,
               label: 'Notifications',
@@ -173,21 +182,21 @@ class StudentProfilePage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // ── Quiz Results ─────────────────────────────────────────────────
+            // ── Recent Results ───────────────────────────────────────────────
             SectionHeader(
-              title: 'My Quiz Results',
+              title: 'Recent Results',
               action: attempts.isEmpty ? null : 'View All',
               onAction: attempts.isEmpty
                   ? null
                   : () => Navigator.push(context,
                         MaterialPageRoute(
-                            builder: (_) => const QuizResultsListScreen())),
+                            builder: (_) => const StudentResultsScreen())),
             ),
             const SizedBox(height: 12),
             if (attempts.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('No quiz attempts yet',
+                child: Text('No results yet',
                     style: GoogleFonts.poppins(
                         color: AppColors.textSecondary)),
               )
