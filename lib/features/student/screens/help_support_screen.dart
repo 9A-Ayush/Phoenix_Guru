@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/feedback_form_screen.dart';
 
 class StudentHelpSupportScreen extends StatefulWidget {
   const StudentHelpSupportScreen({super.key});
@@ -214,70 +213,6 @@ class _StudentHelpSupportScreenState extends State<StudentHelpSupportScreen> {
                         letterSpacing: 0.8))
                     .animate().fadeIn(delay: 400.ms),
                 const SizedBox(height: 10),
-
-                // Submit Feedback Button
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FeedbackFormScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary.withValues(alpha: 0.2),
-                            AppColors.primary.withValues(alpha: 0.05),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary),
-                      ),
-                      child: Row(children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Symbols.edit_square,
-                              color: AppColors.primary, size: 22),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Submit Feedback',
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
-                              Text('Report bugs or request features',
-                                  style: GoogleFonts.poppins(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 12)),
-                              Text('Max 3 submissions per day',
-                                  style: GoogleFonts.poppins(
-                                      color: AppColors.textMuted, fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                        const Icon(Symbols.chevron_right,
-                            color: AppColors.primary, size: 20),
-                      ]),
-                    ).animate().fadeIn(delay: 420.ms).slideX(begin: 0.05, end: 0),
-                  ),
-                ),
 
                 ...[
                   (Symbols.mail, AppColors.primary, 'Email Support', 'support@phoenixguru.app', 'Typically replies in 24h'),

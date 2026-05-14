@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/models.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../shared/widgets/feedback_form_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../teacher/screens/edit_profile_screen.dart';
 import '../../teacher/screens/notifications_screen.dart';
@@ -112,6 +113,14 @@ class StudentProfilePage extends StatelessWidget {
                 label: 'Notifications',
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+              ),
+              const SizedBox(height: 10),
+              MenuRow(
+                icon: Symbols.edit_square,
+                iconColor: AppColors.primary,
+                label: 'Submit Feedback',
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const FeedbackFormScreen())),
               ),
               const SizedBox(height: 10),
               MenuRow(
