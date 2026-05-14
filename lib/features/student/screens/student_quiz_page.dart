@@ -7,15 +7,45 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/models.dart';
 import '../quiz/join_live_quiz_screen.dart';
-import '../quiz/quiz_screens.dart';
+import 'student_test_detail_screen.dart';
 
 // ── Quiz / Tests Page ─────────────────────────────────────────────────────────
-class StudentQuizPage extends StatelessWidget {
+class StudentQuizPage extends StatefulWidget {
   const StudentQuizPage({super.key});
 
   @override
+  State<StudentQuizPage> createState() => _StudentQuizPageState();
+}
+
+class _StudentQuizPageState extends State<StudentQuizPage> {
+  bool _isUpcoming = true;
+
+  @override
   Widget build(BuildContext context) {
-    final tests = context.watch<AppState>().allTests;
+    final state = context.watch<AppState>();
+    final myClasses = state.myClasses.map((c) => c.id).toSet();
+    final allTests = state.allTests.where((t) => myClasses.contains(t.classId)).toList();
+    final myAttempts = state.myAttempts;
+
+    List<TestModel> displayedTests = [];
+
+    if (_isUpcoming) {
+      displayedTests = allTests.where((t) {
+        if (!t.isPublished) return false;
+        if (t.isExpired) return false;
+        final attemptCount = myAttempts.where((a) => a.testId == t.id).length;
+        return attemptCount < t.maxAttempts;
+      }).toList();
+    } else {
+      displayedTests = allTests.where((t) {
+        if (!t.isPublished) return false;
+        final attemptCount = myAttempts.where((a) => a.testId == t.id).length;
+        final isMaxed = attemptCount >= t.maxAttempts;
+        final isExp = t.isExpired;
+        return attemptCount > 0 || isMaxed || isExp;
+      }).toList();
+    }
+
     return SafeArea(
       bottom: false,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -81,30 +111,38 @@ class StudentQuizPage extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(children: [
-            Container(
-              height: 36,
-              width: 100,
-              decoration: BoxDecoration(
-                  color: AppColors.warning,
-                  borderRadius: BorderRadius.circular(10)),
-              alignment: Alignment.center,
-              child: Text('Upcoming',
-                  style: GoogleFonts.poppins(
-                      color: AppColors.bg,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+            GestureDetector(
+              onTap: () => setState(() => _isUpcoming = true),
+              child: Container(
+                height: 36,
+                width: 100,
+                decoration: BoxDecoration(
+                    color: _isUpcoming ? AppColors.warning : AppColors.surface,
+                    borderRadius: BorderRadius.circular(10)),
+                alignment: Alignment.center,
+                child: Text('Upcoming',
+                    style: GoogleFonts.poppins(
+                        color: _isUpcoming ? AppColors.bg : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: _isUpcoming ? FontWeight.w600 : FontWeight.normal)),
+              ),
             ),
             const SizedBox(width: 8),
-            Container(
-              height: 36,
-              width: 80,
-              decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(10)),
-              alignment: Alignment.center,
-              child: Text('Done',
-                  style: GoogleFonts.poppins(
-                      color: AppColors.textSecondary, fontSize: 12)),
+            GestureDetector(
+              onTap: () => setState(() => _isUpcoming = false),
+              child: Container(
+                height: 36,
+                width: 80,
+                decoration: BoxDecoration(
+                    color: !_isUpcoming ? AppColors.warning : AppColors.surface,
+                    borderRadius: BorderRadius.circular(10)),
+                alignment: Alignment.center,
+                child: Text('Done',
+                    style: GoogleFonts.poppins(
+                        color: !_isUpcoming ? AppColors.bg : AppColors.textSecondary, 
+                        fontSize: 12,
+                        fontWeight: !_isUpcoming ? FontWeight.w600 : FontWeight.normal)),
+              ),
             ),
           ]),
         ),
@@ -113,17 +151,17 @@ class StudentQuizPage extends StatelessWidget {
 
         // ── Test list ─────────────────────────────────────────────────────
         Expanded(
-          child: tests.isEmpty
+          child: displayedTests.isEmpty
               ? Center(
-                  child: Text('No tests scheduled',
+                  child: Text(_isUpcoming ? 'No tests scheduled' : 'No tests completed',
                       style:
                           GoogleFonts.poppins(color: AppColors.textSecondary)))
               : ListView.separated(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                  itemCount: tests.length,
+                  itemCount: displayedTests.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) => _TestCard(test: tests[i], index: i),
+                  itemBuilder: (_, i) => _TestCard(test: displayedTests[i], index: i),
                 ),
         ),
       ]),
@@ -137,57 +175,99 @@ class _TestCard extends StatelessWidget {
   final int index;
   const _TestCard({required this.test, required this.index});
 
+  String _formatExpiry(DateTime? d) {
+    if (d == null) return 'No expiry';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final attemptCount = state.myAttempts.where((a) => a.testId == test.id).length;
+    final maxAttemptsReached = attemptCount >= test.maxAttempts;
+    final isExpired = test.isExpired;
+    final isLocked = maxAttemptsReached || isExpired;
+
     return GestureDetector(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => TestAttemptScreen(test: test))),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentTestDetailScreen(test: test),
+        ),
+      ),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: isLocked ? AppColors.error.withOpacity(0.1) : AppColors.primary.withOpacity(0.1)
+          ),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Expanded(
-              child: Text(test.title,
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(test.subject,
+                  style: GoogleFonts.poppins(
+                      color: AppColors.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5)),
+              const SizedBox(height: 2),
+              Text(test.title,
                   style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w600)),
-            ),
+            ]),
             Container(
               height: 24,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                  color: AppColors.warningLight,
+                  color: isLocked ? AppColors.errorLight : AppColors.successLight,
                   borderRadius: BorderRadius.circular(8)),
               alignment: Alignment.center,
-              child: Text(test.isLive ? 'Live' : 'Upcoming',
+              child: Text(
+                  maxAttemptsReached 
+                    ? 'Completed' 
+                    : (isExpired ? 'Expired' : 'Available'),
                   style: GoogleFonts.poppins(
-                      color: AppColors.warning,
+                      color: isLocked ? AppColors.error : AppColors.success,
                       fontSize: 10,
                       fontWeight: FontWeight.w600)),
             ),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(children: [
-            const Icon(Symbols.schedule, color: AppColors.textSecondary, size: 14),
-            const SizedBox(width: 4),
-            Text('${test.durationMinutes} mins',
-                style: GoogleFonts.poppins(
-                    color: AppColors.textSecondary, fontSize: 12)),
-            const SizedBox(width: 16),
-            const Icon(Symbols.help, color: AppColors.textSecondary, size: 14),
-            const SizedBox(width: 4),
-            Text('${test.questionCount} Questions',
-                style: GoogleFonts.poppins(
-                    color: AppColors.textSecondary, fontSize: 12)),
+            _Meta(Symbols.schedule, '${test.durationMinutes}m'),
+            const SizedBox(width: 12),
+            _Meta(Symbols.help, '${test.questionCount} Qs'),
+            const SizedBox(width: 12),
+            _Meta(Symbols.history, '$attemptCount/${test.maxAttempts} Tries'),
           ]),
+          if (test.expiresAt != null) ...[
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Symbols.event_busy, color: isExpired ? AppColors.error : AppColors.textMuted, size: 12),
+              const SizedBox(width: 4),
+              Text(
+                'Expires: ${_formatExpiry(test.expiresAt)}',
+                style: GoogleFonts.poppins(
+                    color: isExpired ? AppColors.error : AppColors.textMuted, 
+                    fontSize: 11),
+              ),
+            ]),
+          ],
         ]),
       ).animate().fadeIn(delay: (index * 60).ms),
     );
   }
+
+  Widget _Meta(IconData icon, String label) => Row(children: [
+    Icon(icon, color: AppColors.textSecondary, size: 14),
+    const SizedBox(width: 4),
+    Text(label, style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 12)),
+  ]);
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -7,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/models.dart';
 import '../../../shared/widgets/widgets.dart';
+import 'student_class_detail_screen.dart';
 
 // ── Classes Page ──────────────────────────────────────────────────────────────
 class StudentClassesPage extends StatefulWidget {
@@ -81,13 +83,22 @@ class _StudentClassesPageState extends State<StudentClassesPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (_, i) {
                     final cls = classes[i];
-                    return ClassListTile(
-                      icon: _icon(cls.subject),
-                      iconColor: _color(i),
-                      name: cls.name,
-                      subtitle:
-                          '${cls.teacherName} • ${cls.studentCount} students',
-                    ).animate().fadeIn(delay: (i * 60).ms);
+                    return GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              StudentClassDetailScreen(cls: cls),
+                        ),
+                      ),
+                      child: ClassListTile(
+                        icon: _icon(cls.subject),
+                        iconColor: _color(i),
+                        name: cls.name,
+                        subtitle:
+                            '${cls.teacherName} • ${cls.studentCount} students',
+                      ).animate().fadeIn(delay: (i * 60).ms),
+                    );
                   },
                 ),
         ),
@@ -130,6 +141,16 @@ class _JoinClassSheetState extends State<_JoinClassSheet> {
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  /// Re-opens the keyboard even if it was previously dismissed.
+  void _showKeyboard() {
+    if (_focus.hasFocus) {
+      // Already focused — force keyboard to show again
+      SystemChannels.textInput.invokeMethod('TextInput.show');
+    } else {
+      FocusScope.of(context).requestFocus(_focus);
+    }
   }
 
   void _onChanged(String v) {
@@ -202,7 +223,7 @@ class _JoinClassSheetState extends State<_JoinClassSheet> {
 
               // ── 6 display boxes ─────────────────────────────────────────
               GestureDetector(
-                onTap: () => _focus.requestFocus(),
+                onTap: _showKeyboard,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(6, (i) {
@@ -248,7 +269,14 @@ class _JoinClassSheetState extends State<_JoinClassSheet> {
                   cursorColor: Colors.transparent,
                   decoration: const InputDecoration(
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
                     counterText: '',
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                   ),
                   onChanged: _onChanged,
                 ),

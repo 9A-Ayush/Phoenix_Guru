@@ -47,6 +47,27 @@ The teacher module is fully functional and production-ready with all core featur
 ## Recent Changes
 
 ### May 14, 2026 (Latest)
+- **Student Test Detail Screen** — New dedicated `StudentTestDetailScreen` for comprehensive test information:
+  - **Test Overview**: Subject badge, availability status (Available/Completed/Expired), test title, and class name
+  - **Detailed Information**: Total questions, duration, allowed attempts, attempts used, attempts remaining, scheduled date, expiry date
+  - **Performance Tracking**: Shows attempts count and best score percentage for previously taken tests
+  - **Smart Locking**: Tests are automatically locked after maximum attempts reached or expiry date passed
+  - **Important Notes**: Anti-cheat warnings, attempt limits, and expiry reminders
+  - **Visual Feedback**: Color-coded status indicators (green for available, red for locked), animated elements
+  - **Navigation**: Accessible from both Quiz page and Class Detail → Tests tab
+- **Enhanced Test Navigation** — Test cards in `StudentQuizPage` and `StudentClassDetailScreen` now navigate to detail screen instead of directly starting the test
+- **Test Attempt Validation** — Students can only start tests that are not expired and haven't reached maximum attempts
+
+### May 14, 2026 (Earlier)
+- **Student Class Detail Screen** — New `StudentClassDetailScreen` with 3 tabs:
+  - **Members**: Real-time list of all students + teacher card. Highlights current user with "You" badge
+  - **Tests**: Live tests from Firestore for that class. Shows status (Live/Upcoming/Done), duration, question count, rank. Tapping starts the test
+  - **Materials**: Real-time Cloudinary stream for that class. View-only, opens in external browser. No share/screenshot controls
+- **Tappable Class Tiles** — `StudentClassesPage` class tiles now navigate to `StudentClassDetailScreen`
+- **Real-time Material Page** — `StudentMaterialPage` replaced hardcoded data with live Firestore streams merged across all enrolled classes. Filter chips: All / PDFs / Images / Docs / Links
+- **Student Profile Sync** — Stats (Classes, Tests Done, Avg Score) now computed from live Firebase data. Avg score uses rank percentile. Quiz result cards show real rank data. Avatar taps to Edit Profile
+
+### May 14, 2026 (Latest)
 - **Clickable Avatar** — Tapping the avatar on Teacher and Student dashboards now navigates directly to the Profile tab (index 4)
 - **Profile Photo Upload Fix** — Removed `overwrite` and `public_id` fields from unsigned Cloudinary upload (they require signed uploads and caused 400 errors). Profile photos now upload with a unique timestamped filename
 - **Consistent Screen Headers** — Payment Management, Notifications, and Feedback screens now use the same flat header style as Upload Material (chevron + "Back" text, large title, subtitle)
@@ -383,14 +404,16 @@ points = isCorrect ? (500 + 500 * speedFactor).round() : 0
 |---|---|---|
 | 06 | Dashboard | Live quiz banner, stats, classes |
 | 07 | My Classes | List + join class sheet (6-digit OTP) |
-| 08 | Study Material | Filter tabs, files |
-| 09 | Tests | Upcoming/done tabs |
-| 10 | Join Live Quiz | Real PIN → Firestore session lookup |
-| 11 | Live Quiz ABCD | Answer cards, countdown timer |
-| 12 | Test Taking | Progress bar, MCQ, anti-cheat |
-| 13 | Profile | Stats, Edit Profile, Change Password, Notifications, Help |
-| 14 | Quiz Leaderboard | Podium UI |
-| 15 | Quiz Results List | Grade badges, real Firestore data |
+| 08 | Class Detail | 3 tabs: Members, Tests, Materials (read-only) |
+| 09 | Study Material | Filter tabs, files |
+| 10 | Tests | Upcoming/done tabs, tap → test detail |
+| 11 | Test Detail | Comprehensive test info, attempts tracking, smart locking |
+| 12 | Join Live Quiz | Real PIN → Firestore session lookup |
+| 13 | Live Quiz ABCD | Answer cards, countdown timer |
+| 14 | Test Taking | Progress bar, MCQ, anti-cheat |
+| 15 | Profile | Stats, Edit Profile, Change Password, Notifications, Help |
+| 16 | Quiz Leaderboard | Podium UI |
+| 17 | Quiz Results List | Grade badges, real Firestore data |
 
 ### Teacher Module
 | # | Screen | Notes |

@@ -18,10 +18,12 @@ class CreateTestScreen extends StatefulWidget {
 class _CreateTestScreenState extends State<CreateTestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
+  String? _selectedSubject;
   int _duration = 60;
   String? _selectedClassId;
   DateTime? _expiresAt;   // stores full date + time
   int _maxAttempts = 1;
+  bool _isPublished = true;
   bool _loading = false;
   final List<_QuestionData> _questions = [];
 
@@ -131,16 +133,18 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
 
     await context.read<AppState>().createTest(
       title: _titleCtrl.text.trim(),
+      subject: _selectedSubject ?? 'General',
       classId: _selectedClassId!,
       durationMinutes: _duration,
       questions: questions,
       expiresAt: _expiresAt,
       maxAttempts: _maxAttempts,
+      isPublished: _isPublished,
     );
     if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Test published!',
+      content: Text(_isPublished ? 'Test published!' : 'Test saved to drafts!',
           style: GoogleFonts.poppins(color: Colors.white)),
       backgroundColor: AppColors.success,
       behavior: SnackBarBehavior.floating,
@@ -195,6 +199,32 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                   prefixIcon: const Icon(Symbols.edit, color: AppColors.textMuted, size: 18),
                 ),
               ).animate().fadeIn(delay: 100.ms),
+
+              const SizedBox(height: 16),
+              // Subject
+              _Lbl('Subject'),
+              const SizedBox(height: 8),
+              Container(
+                height: 52, padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface, borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: _selectedSubject != null ? AppColors.primary : AppColors.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedSubject,
+                    hint: Text('Select Subject', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14)),
+                    dropdownColor: AppColors.surface2,
+                    icon: const Icon(Symbols.keyboard_arrow_down, color: AppColors.textMuted, size: 18),
+                    isExpanded: true,
+                    items: ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'General'].map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s, style: GoogleFonts.poppins(color: Colors.white, fontSize: 14)),
+                    )).toList(),
+                    onChanged: (v) => setState(() => _selectedSubject = v),
+                  ),
+                ),
+              ).animate().fadeIn(delay: 120.ms),
 
               const SizedBox(height: 16),
               // Assign to class
@@ -429,6 +459,34 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                   }).toList(),
                 ),
               ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.15, end: 0),
+
+              const SizedBox(height: 20),
+
+              // Publish Toggle
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(children: [
+                  const Icon(Symbols.publish, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Publish Immediately', style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text('Students will see this test right away', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 11)),
+                    ]),
+                  ),
+                  Switch(
+                    value: _isPublished,
+                    onChanged: (v) => setState(() => _isPublished = v),
+                    activeColor: AppColors.primary,
+                    activeTrackColor: AppColors.primary.withOpacity(0.3),
+                  ),
+                ]),
+              ).animate().fadeIn(delay: 280.ms),
 
               const SizedBox(height: 24),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [

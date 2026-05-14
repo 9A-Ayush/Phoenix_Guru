@@ -867,11 +867,13 @@ class AppState extends ChangeNotifier {
   // ── Tests ─────────────────────────────────────────────────────────────────
   Future<TestModel> createTest({
     required String title,
+    required String subject,
     required String classId,
     required int durationMinutes,
     required List<QuizQuestion> questions,
     DateTime? expiresAt,
     int maxAttempts = 1,
+    bool isPublished = false,
   }) async {
     _isLoading = true; notifyListeners();
     if (questions.length > 30) {
@@ -887,12 +889,14 @@ class AppState extends ChangeNotifier {
     final cls = _classes.firstWhere((c) => c.id == classId);
     final test = TestModel(
       title: title,
+      subject: subject,
       classId: classId,
       className: cls.name,
       durationMinutes: durationMinutes,
       questions: questions,
       expiresAt: expiresAt,
       maxAttempts: maxAttempts,
+      isPublished: isPublished,
     );
     await _firestore.collection('tests').doc(test.id).set(test.toMap());
     _isLoading = false;
@@ -934,13 +938,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Toggles isLive (publish/unpublish) on a test.
-  Future<String?> toggleTestPublish(String testId, {required bool isLive, String? pin}) async {
+  /// Toggles isPublished on a test.
+  Future<String?> toggleTestPublish(String testId, {required bool isPublished}) async {
     try {
-      final data = <String, dynamic>{'isLive': isLive};
-      if (isLive && pin != null) data['pin'] = pin;
-      if (!isLive) data['pin'] = null; // clear pin when unpublishing
-      await _firestore.collection('tests').doc(testId).update(data);
+      await _firestore.collection('tests').doc(testId).update({
+        'isPublished': isPublished,
+      });
       return null;
     } catch (e) {
       return e.toString();
@@ -988,12 +991,25 @@ class AppState extends ChangeNotifier {
     required Map<String, int> answers,
   }) async {
     // Check maxAttempts enforcement
-    final existing = _attempts.where((a) =>
-        a.testId == testId && a.userId == _currentUser!.id).length;
+    final attemptsSnap = await _firestore
+        .collection('attempts')
+        .where('testId', isEqualTo: testId)
+        .where('userId', isEqualTo: _currentUser!.id)
+        .get();
+    
+    final existing = attemptsSnap.docs.length;
+    
     // Find the test to get maxAttempts
-    final test = _tests.firstWhere((t) => t.id == testId, orElse: () => throw Exception('Test not found'));
+    final testDoc = await _firestore.collection('tests').doc(testId).get();
+    if (!testDoc.exists) throw Exception('Test not found');
+    final test = TestModel.fromMap(testDoc.data()!);
+    
     if (existing >= test.maxAttempts) {
       throw Exception('Maximum attempts reached for this test.');
+    }
+    
+    if (test.isExpired) {
+      throw Exception('This test has expired.');
     }
     final attempt = QuizAttempt(
       testId: testId,

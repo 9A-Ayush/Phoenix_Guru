@@ -7,6 +7,7 @@ import '../../../core/providers/app_state.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../quiz/join_live_quiz_screen.dart';
 import '../quiz/quiz_screens.dart';
+import 'student_class_detail_screen.dart';
 import 'package:provider/provider.dart';
 
 class StudentDashboard extends StatelessWidget {
@@ -19,7 +20,13 @@ class StudentDashboard extends StatelessWidget {
     final user = state.currentUser;
     if (user == null) return const SizedBox.shrink();
     final classes = state.myClasses;
-    final tests = state.allTests;
+    final myClassIds = classes.map((c) => c.id).toSet();
+    final myAttempts = state.myAttempts;
+    final tests = state.allTests.where((t) {
+      if (!myClassIds.contains(t.classId) || !t.isLive) return false;
+      final attemptCount = myAttempts.where((a) => a.testId == t.id).length;
+      return attemptCount < t.maxAttempts;
+    }).toList();
     final payment = state.getStudentPayment(user.id);
 
     return SafeArea(
@@ -170,6 +177,12 @@ class StudentDashboard extends StatelessWidget {
                   iconColor: _sColor(e.key),
                   name: cls.name,
                   subtitle: '${cls.teacherName} • ${cls.studentCount} students',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StudentClassDetailScreen(cls: cls),
+                    ),
+                  ),
                 ).animate().fadeIn(delay: (300 + e.key * 80).ms).slideX(begin: 0.1, end: 0),
               );
             }),

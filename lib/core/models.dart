@@ -158,6 +158,7 @@ class QuizQuestion {
 class TestModel {
   final String id;
   final String title;
+  final String subject;
   final String classId;
   final String className;
   final int durationMinutes;
@@ -165,6 +166,7 @@ class TestModel {
   final DateTime? scheduledAt;
   final DateTime? expiresAt;
   final bool isLive;
+  final bool isPublished;
   final int maxAttempts;
   final String? pin;
   final int currentQuestionIndex;
@@ -172,6 +174,7 @@ class TestModel {
   TestModel({
     String? id,
     required this.title,
+    required this.subject,
     required this.classId,
     required this.className,
     required this.durationMinutes,
@@ -179,6 +182,7 @@ class TestModel {
     this.scheduledAt,
     this.expiresAt,
     this.isLive = false,
+    this.isPublished = false,
     this.maxAttempts = 1,
     String? pin,
     this.currentQuestionIndex = 0,
@@ -197,6 +201,7 @@ class TestModel {
     return {
       'id': id,
       'title': title,
+      'subject': subject,
       'classId': classId,
       'className': className,
       'durationMinutes': durationMinutes,
@@ -204,6 +209,7 @@ class TestModel {
       'scheduledAt': scheduledAt?.toIso8601String(),
       'expiresAt': expiresAt?.toIso8601String(),
       'isLive': isLive,
+      'isPublished': isPublished,
       'maxAttempts': maxAttempts,
       'pin': pin,
       'currentQuestionIndex': currentQuestionIndex,
@@ -215,6 +221,7 @@ class TestModel {
     return TestModel(
       id: id,
       title: map['title'],
+      subject: map['subject'] ?? 'General',
       classId: map['classId'],
       className: map['className'],
       durationMinutes: map['durationMinutes'],
@@ -222,6 +229,7 @@ class TestModel {
       scheduledAt: map['scheduledAt'] != null ? DateTime.parse(map['scheduledAt']) : null,
       expiresAt: map['expiresAt'] != null ? DateTime.parse(map['expiresAt']) : null,
       isLive: map['isLive'] ?? false,
+      isPublished: map['isPublished'] ?? false,
       maxAttempts: map['maxAttempts'] ?? 1,
       pin: map['pin'] as String?,
       currentQuestionIndex: map['currentQuestionIndex'] as int? ?? 0,
