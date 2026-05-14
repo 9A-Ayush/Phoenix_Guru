@@ -148,5 +148,27 @@ service cloud.firestore {
                             && request.resource.data.userId == request.auth.uid;
       allow delete: if false; // Trackers should not be deleted
     }
+
+    // ── Payments ────────────────────────────────────────────────────────────
+    // Teachers can create, read, update payment records for their students.
+    // Students can only read their own payment record.
+    match /payments/{paymentId} {
+      // Student reads their own; teacher reads all
+      allow read: if request.auth != null
+                  && (
+                    resource.data.studentId == request.auth.uid
+                    ||
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+                  );
+      // Only teachers can create payment records
+      allow create: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      // Only teachers can update payment records (mark paid/due/overdue)
+      allow update: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      // Only teachers can delete payment records
+      allow delete: if request.auth != null
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
   }
 }
