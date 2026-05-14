@@ -46,8 +46,12 @@ class TeacherProfilePage extends StatelessWidget {
               alignment: Alignment.bottomCenter,
               clipBehavior: Clip.none,
               children: [
-                GradientAvatar(
-                    initials: user.avatarInitials, radius: 40, fontSize: 28),
+                UserAvatar(
+                  initials: user.avatarInitials,
+                  photoUrl: user.photoUrl,
+                  radius: 40,
+                  fontSize: 28,
+                ),
                 Positioned(
                   bottom: -10,
                   child: Container(

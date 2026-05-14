@@ -567,3 +567,120 @@ class GradientAvatar extends StatelessWidget {
     );
   }
 }
+
+// ── User Avatar (photo or initials + role badge) ──────────────────────────────
+
+class UserAvatar extends StatelessWidget {
+  final String initials;
+  final String? photoUrl;
+  final double radius;
+  final double fontSize;
+  /// 'T' for teacher (purple), 'S' for student (green), null = no badge
+  final String? badgeLabel;
+  final Color? badgeColor;
+
+  const UserAvatar({
+    super.key,
+    required this.initials,
+    this.photoUrl,
+    this.radius = 22,
+    this.fontSize = 16,
+    this.badgeLabel,
+    this.badgeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = radius * 2;
+    final badgeSize = radius * 0.55;
+
+    Widget avatar;
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      avatar = Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x556C47FF),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: Image.network(
+            photoUrl!,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _initialsWidget(size),
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return _initialsWidget(size);
+            },
+          ),
+        ),
+      );
+    } else {
+      avatar = GradientAvatar(
+          initials: initials, radius: radius, fontSize: fontSize);
+    }
+
+    if (badgeLabel == null) return avatar;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          right: -2,
+          bottom: -2,
+          child: Container(
+            width: badgeSize * 2,
+            height: badgeSize * 2,
+            decoration: BoxDecoration(
+              color: badgeColor ?? AppColors.primary,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.bg, width: 2),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              badgeLabel!,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: badgeSize * 0.75,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _initialsWidget(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF9B7BFF), Color(0xFF5B2FD4)],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}

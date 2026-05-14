@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:uuid/uuid.dart';
 import '../models.dart';
 import '../services/rate_limiter.dart';
@@ -468,6 +472,68 @@ class AppState extends ChangeNotifier {
       return null;
     } catch (e) {
       return e.toString();
+    }
+  }
+
+  /// Uploads a profile photo to Cloudinary and saves the URL to Firestore.
+  Future<String?> updateProfilePhoto(Uint8List imageBytes, String fileName) async {
+    if (_currentUser == null) return 'Not logged in';
+    try {
+      final cloudName = const String.fromEnvironment('CLOUDINARY_CLOUD_NAME',
+          defaultValue: 'dwv7xyucs');
+      final uploadPreset = const String.fromEnvironment('CLOUDINARY_UPLOAD_PRESET',
+          defaultValue: 'phoenix_guru_materials');
+
+      // Read from .env via flutter_dotenv if available
+      final envCloudName = _getEnvValue('CLOUDINARY_CLOUD_NAME') ?? cloudName;
+      final envPreset = _getEnvValue('CLOUDINARY_UPLOAD_PRESET') ?? uploadPreset;
+
+      final uri = Uri.parse(
+          'https://api.cloudinary.com/v1_1/$envCloudName/image/upload');
+
+      // Build multipart request
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['upload_preset'] = envPreset
+        ..fields['folder'] = 'profile_photos'
+        ..fields['public_id'] = 'user_${_currentUser!.id}'
+        ..fields['overwrite'] = 'true'
+        ..files.add(http.MultipartFile.fromBytes(
+          'file',
+          imageBytes,
+          filename: fileName,
+          contentType: MediaType('image', fileName.split('.').last),
+        ));
+
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+
+      if (response.statusCode != 200) {
+        return 'Upload failed: ${response.statusCode}';
+      }
+
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final photoUrl = json['secure_url'] as String;
+
+      // Save URL to Firestore
+      await _firestore
+          .collection('users')
+          .doc(_currentUser!.id)
+          .update({'photoUrl': photoUrl});
+
+      _currentUser = _currentUser!.copyWith(photoUrl: photoUrl);
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  String? _getEnvValue(String key) {
+    try {
+      // flutter_dotenv stores values in dotenv.env map
+      return dotenv.env[key];
+    } catch (_) {
+      return null;
     }
   }
 

@@ -40,31 +40,13 @@ class StudentProfilePage extends StatelessWidget {
             ),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               const SizedBox(height: 50),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  GradientAvatar(initials: user.avatarInitials, radius: 40, fontSize: 28),
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.bg, width: 2),
-                      ),
-                      child: Center(
-                        child: Text('S',
-                            style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ),
-                ],
+              UserAvatar(
+                initials: user.avatarInitials,
+                photoUrl: user.photoUrl,
+                radius: 40,
+                fontSize: 28,
+                badgeLabel: 'S',
+                badgeColor: AppColors.success,
               ),
               const SizedBox(height: 16),
               Text(user.name,

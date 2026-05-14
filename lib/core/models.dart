@@ -11,6 +11,7 @@ class UserModel {
   final UserRole role;
   final String avatarInitials;
   final DateTime createdAt;
+  final String? photoUrl;
 
   UserModel({
     String? id,
@@ -18,17 +19,19 @@ class UserModel {
     required this.email,
     required this.role,
     DateTime? createdAt,
+    this.photoUrl,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now(),
         avatarInitials = name.split(' ').take(2).map((w) => w[0].toUpperCase()).join();
 
-  UserModel copyWith({String? name, String? email, UserRole? role}) {
+  UserModel copyWith({String? name, String? email, UserRole? role, String? photoUrl}) {
     return UserModel(
       id: id,
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
       createdAt: createdAt,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 
@@ -39,6 +42,7 @@ class UserModel {
       'email': email,
       'role': role.name,
       'createdAt': createdAt.toIso8601String(),
+      if (photoUrl != null) 'photoUrl': photoUrl,
     };
   }
 
@@ -51,6 +55,7 @@ class UserModel {
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
+      photoUrl: map['photoUrl'] as String?,
     );
   }
 }

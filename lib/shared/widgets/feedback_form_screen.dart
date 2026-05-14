@@ -130,265 +130,245 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Column(
-        children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 0),
-            child: Row(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                // ── Header ──────────────────────────────────────────────────
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Icon(Icons.chevron_left_rounded,
+                            color: Colors.white, size: 20),
+                      ),
                     ),
-                    child: const Icon(Icons.chevron_left_rounded,
-                        color: Colors.white, size: 20),
-                  ),
+                    const SizedBox(width: 14),
+                    Text(
+                      'Submit Feedback',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Text(
-                  'Submit Feedback',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
+
+                const SizedBox(height: 16),
+
+                // ── Submission counter ───────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isLimitReached
+                        ? AppColors.errorLight
+                        : AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isLimitReached ? AppColors.error : AppColors.primary,
+                    ),
                   ),
-                ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isLimitReached ? Symbols.block : Symbols.info,
+                        color: isLimitReached ? AppColors.error : AppColors.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          isLimitReached
+                              ? 'Daily limit reached ($_todaySubmissions/3). Try again tomorrow.'
+                              : 'Submissions today: $_todaySubmissions/3 • $_remainingSubmissions remaining',
+                          style: GoogleFonts.poppins(
+                            color: isLimitReached
+                                ? AppColors.error
+                                : AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(duration: 300.ms),
+
+                const SizedBox(height: 24),
+
+                // ── Issue Type ───────────────────────────────────────────────
+                _buildSectionLabel('Issue Type *'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildTypeChip(
+                      type: FeedbackType.bug,
+                      label: 'Bug Report',
+                      icon: Symbols.bug_report,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildTypeChip(
+                      type: FeedbackType.feature,
+                      label: 'Feature Request',
+                      icon: Symbols.lightbulb,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildTypeChip(
+                      type: FeedbackType.general,
+                      label: 'General',
+                      icon: Symbols.chat,
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 100.ms),
+
+                const SizedBox(height: 24),
+
+                // ── Subject ──────────────────────────────────────────────────
+                _buildSectionLabel('Subject *'),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _subjectController,
+                  maxLength: 100,
+                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Brief title of your issue or suggestion',
+                    counterStyle: GoogleFonts.poppins(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Subject is required';
+                    }
+                    if (value.trim().length < 5) {
+                      return 'Subject must be at least 5 characters';
+                    }
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 150.ms),
+
+                const SizedBox(height: 20),
+
+                // ── Description ──────────────────────────────────────────────
+                _buildSectionLabel('Description *'),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLength: 1000,
+                  maxLines: 6,
+                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText:
+                        'Provide detailed information about the issue or your suggestion...',
+                    counterStyle: GoogleFonts.poppins(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Description is required';
+                    }
+                    if (value.trim().length < 20) {
+                      return 'Please provide more details (min 20 characters)';
+                    }
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 200.ms),
+
+                const SizedBox(height: 20),
+
+                // ── Category ─────────────────────────────────────────────────
+                _buildSectionLabel('Category (Optional)'),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  dropdownColor: AppColors.surface,
+                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+                  decoration: const InputDecoration(hintText: 'Select a category'),
+                  items: _categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => _selectedCategory = value),
+                ).animate().fadeIn(delay: 250.ms),
+
+                const SizedBox(height: 20),
+
+                // ── Priority ─────────────────────────────────────────────────
+                _buildSectionLabel('Priority (Optional)'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildPriorityChip(FeedbackPriority.low, 'Low'),
+                    const SizedBox(width: 8),
+                    _buildPriorityChip(FeedbackPriority.medium, 'Medium'),
+                    const SizedBox(width: 8),
+                    _buildPriorityChip(FeedbackPriority.high, 'High'),
+                  ],
+                ).animate().fadeIn(delay: 300.ms),
+
+                const SizedBox(height: 32),
+
+                // ── Submit Button ─────────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: isLimitReached || _isSubmitting
+                        ? null
+                        : _submitFeedback,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: AppColors.surface2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            'Submit Feedback',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isLimitReached
+                                  ? AppColors.textMuted
+                                  : Colors.white,
+                            ),
+                          ),
+                  ),
+                ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1, end: 0),
               ],
             ),
           ),
-
-          // Submission counter
-          Padding(
-            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isLimitReached
-                    ? AppColors.errorLight
-                    : AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isLimitReached ? AppColors.error : AppColors.primary,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isLimitReached ? Symbols.block : Symbols.info,
-                    color: isLimitReached ? AppColors.error : AppColors.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      isLimitReached
-                          ? 'Daily limit reached ($_todaySubmissions/3). Try again tomorrow.'
-                          : 'Submissions today: $_todaySubmissions/3 • $_remainingSubmissions remaining',
-                      style: GoogleFonts.poppins(
-                        color: isLimitReached
-                            ? AppColors.error
-                            : AppColors.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 300.ms),
-          ),
-
-          // Form
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Issue Type
-                    _buildSectionLabel('Issue Type *'),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _buildTypeChip(
-                          type: FeedbackType.bug,
-                          label: 'Bug Report',
-                          icon: Symbols.bug_report,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildTypeChip(
-                          type: FeedbackType.feature,
-                          label: 'Feature Request',
-                          icon: Symbols.lightbulb,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildTypeChip(
-                          type: FeedbackType.general,
-                          label: 'General',
-                          icon: Symbols.chat,
-                        ),
-                      ],
-                    ).animate().fadeIn(delay: 100.ms),
-
-                    const SizedBox(height: 24),
-
-                    // Subject
-                    _buildSectionLabel('Subject *'),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _subjectController,
-                      maxLength: 100,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Brief title of your issue or suggestion',
-                        counterStyle: GoogleFonts.poppins(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Subject is required';
-                        }
-                        if (value.trim().length < 5) {
-                          return 'Subject must be at least 5 characters';
-                        }
-                        return null;
-                      },
-                    ).animate().fadeIn(delay: 150.ms),
-
-                    const SizedBox(height: 20),
-
-                    // Description
-                    _buildSectionLabel('Description *'),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLength: 1000,
-                      maxLines: 6,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText:
-                            'Provide detailed information about the issue or your suggestion...',
-                        counterStyle: GoogleFonts.poppins(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                        ),
-                        alignLabelWithHint: true,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Description is required';
-                        }
-                        if (value.trim().length < 20) {
-                          return 'Please provide more details (min 20 characters)';
-                        }
-                        return null;
-                      },
-                    ).animate().fadeIn(delay: 200.ms),
-
-                    const SizedBox(height: 20),
-
-                    // Category
-                    _buildSectionLabel('Category (Optional)'),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      value: _selectedCategory,
-                      dropdownColor: AppColors.surface,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Select a category',
-                      ),
-                      items: _categories.map((category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedCategory = value);
-                      },
-                    ).animate().fadeIn(delay: 250.ms),
-
-                    const SizedBox(height: 20),
-
-                    // Priority
-                    _buildSectionLabel('Priority (Optional)'),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _buildPriorityChip(FeedbackPriority.low, 'Low'),
-                        const SizedBox(width: 8),
-                        _buildPriorityChip(FeedbackPriority.medium, 'Medium'),
-                        const SizedBox(width: 8),
-                        _buildPriorityChip(FeedbackPriority.high, 'High'),
-                      ],
-                    ).animate().fadeIn(delay: 300.ms),
-
-                    const SizedBox(height: 32),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: isLimitReached || _isSubmitting
-                            ? null
-                            : _submitFeedback,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          disabledBackgroundColor: AppColors.surface2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : Text(
-                                'Submit Feedback',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: isLimitReached
-                                      ? AppColors.textMuted
-                                      : Colors.white,
-                                ),
-                              ),
-                      ),
-                    ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1, end: 0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

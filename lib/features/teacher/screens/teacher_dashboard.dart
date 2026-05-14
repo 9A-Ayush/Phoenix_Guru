@@ -48,32 +48,13 @@ class TeacherDashboard extends StatelessWidget {
                       fontSize: 20,
                       fontWeight: FontWeight.w700)),
             ]),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                GradientAvatar(
-                    initials: user.avatarInitials, radius: 22, fontSize: 16),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bg, width: 2),
-                    ),
-                    child: Center(
-                      child: Text('T',
-                          style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ),
-              ],
+            UserAvatar(
+              initials: user.avatarInitials,
+              photoUrl: user.photoUrl,
+              radius: 22,
+              fontSize: 16,
+              badgeLabel: 'T',
+              badgeColor: AppColors.primary,
             ),
           ]).animate().fadeIn(duration: 400.ms),
 
