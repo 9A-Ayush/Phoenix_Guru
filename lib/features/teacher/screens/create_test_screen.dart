@@ -48,6 +48,8 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       onSurface: Colors.white,
       secondary: Color(0xFF5B2FD4),
       onSecondary: Colors.white,
+      tertiary: Color(0xFF5B2FD4),
+      onTertiary: Colors.white,
     ),
     dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0A0A0A)),
     textButtonTheme: TextButtonThemeData(
@@ -57,6 +59,18 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
       ),
     ),
     textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+    timePickerTheme: TimePickerThemeData(
+      backgroundColor: const Color(0xFF0A0A0A),
+      hourMinuteColor: const Color(0xFF5B2FD4),
+      hourMinuteTextColor: Colors.white,
+      dayPeriodColor: const Color(0xFF5B2FD4),
+      dayPeriodTextColor: Colors.white,
+      dialHandColor: const Color(0xFF5B2FD4),
+      dialBackgroundColor: const Color(0xFF1A1A1A),
+      dialTextColor: Colors.white,
+      entryModeIconColor: const Color(0xFF5B2FD4),
+      helpTextStyle: GoogleFonts.poppins(color: Colors.white),
+    ),
   );
 
   Future<void> _pickDateTime() async {
