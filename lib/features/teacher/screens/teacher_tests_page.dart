@@ -138,19 +138,19 @@ class TestCard extends StatelessWidget {
   const TestCard({super.key, required this.test, required this.formatDateTime});
 
   Color get _statusColor {
-    if (test.isLive) return AppColors.success;
+    if (test.isPublished) return AppColors.success;
     if (test.isExpired) return AppColors.error;
     return AppColors.warning;
   }
 
   String get _statusLabel {
-    if (test.isLive) return 'Live';
+    if (test.isPublished) return 'Published';
     if (test.isExpired) return 'Expired';
-    return 'Upcoming';
+    return 'Pending';
   }
 
   IconData get _statusIcon {
-    if (test.isLive) return Symbols.live_tv;
+    if (test.isPublished) return Symbols.check_circle;
     if (test.isExpired) return Symbols.timer_off;
     return Symbols.schedule;
   }
@@ -413,10 +413,10 @@ class TestMenuSheet extends StatelessWidget {
 
         // Publish / Unpublish
         TeacherMenuItem(
-          icon: test.isLive ? Symbols.pause : Symbols.publish,
-          iconColor: test.isLive ? AppColors.warning : AppColors.success,
-          label: test.isLive ? 'Unpublish Test' : 'Publish Test',
-          subtitle: test.isLive
+          icon: test.isPublished ? Symbols.pause : Symbols.publish,
+          iconColor: test.isPublished ? AppColors.warning : AppColors.success,
+          label: test.isPublished ? 'Unpublish Test' : 'Publish Test',
+          subtitle: test.isPublished
               ? 'Stop students from taking this test'
               : 'Make this test available to students',
           onTap: () async {
