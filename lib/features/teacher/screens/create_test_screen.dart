@@ -28,11 +28,6 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
   @override
   void initState() {
     super.initState();
-    _questions.add(_QuestionData(
-      question: 'Which law states that every action has an equal and opposite reaction?',
-      options: ["Newton's First Law", "Newton's Second Law", "Newton's Third Law", "Law of Gravitation"],
-      correctIndex: 2,
-    ));
   }
 
   @override
