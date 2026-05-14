@@ -404,7 +404,7 @@ class _StudentTestsTab extends StatelessWidget {
     final tests = context.watch<AppState>().testsForClass(cls.id).where((t) {
       final attemptCount = myAttempts.where((a) => a.testId == t.id).length;
       if (attemptCount > 0) return true; // Show taken tests
-      return t.isLive; // Otherwise only show if live
+      return t.isPublished; // Otherwise only show if published
     }).toList();
 
     if (tests.isEmpty) {

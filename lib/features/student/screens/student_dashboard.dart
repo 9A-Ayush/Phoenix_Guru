@@ -23,7 +23,7 @@ class StudentDashboard extends StatelessWidget {
     final myClassIds = classes.map((c) => c.id).toSet();
     final myAttempts = state.myAttempts;
     final tests = state.allTests.where((t) {
-      if (!myClassIds.contains(t.classId) || !t.isLive) return false;
+      if (!myClassIds.contains(t.classId) || !t.isPublished) return false;
       final attemptCount = myAttempts.where((a) => a.testId == t.id).length;
       return attemptCount < t.maxAttempts;
     }).toList();
