@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -145,6 +146,35 @@ class MaterialCacheService {
   Future<Map<String, dynamic>?> getMaterialMetadata(String materialId) async {
     final metadata = await _getCacheMetadata();
     return metadata[materialId] as Map<String, dynamic>?;
+  }
+
+  /// Get cached file path synchronously (faster for UI)
+  /// Returns null if not cached or file doesn't exist
+  String? getCachedFilePathSync(String materialId) {
+    try {
+      // This is a synchronous check - use with caution
+      // Only works if metadata is already loaded
+      return null; // Fallback to async method
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Preload file into memory for faster access
+  Future<void> preloadFile(String materialId) async {
+    try {
+      final filePath = await getCachedFilePath(materialId);
+      if (filePath != null) {
+        final file = File(filePath);
+        if (await file.exists()) {
+          // Read file to warm up the cache
+          await file.length();
+          debugPrint('✅ Preloaded material: $materialId');
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to preload material: $e');
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────

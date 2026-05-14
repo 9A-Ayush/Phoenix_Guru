@@ -51,12 +51,17 @@ class _SecurePDFViewerState extends State<SecurePDFViewer> {
     // Enable screenshot blocking
     await _securityService.protectScreen();
 
+    // Preload file if cached for faster loading
+    if (widget.filePath != null) {
+      await _cacheService.preloadFile(widget.materialId);
+    }
+
     // Load last viewed page
     final lastViewed = await _cacheService.getLastViewedPosition(widget.materialId);
     if (lastViewed != null && lastViewed['page'] != null) {
       final page = lastViewed['page'] as int;
       // Jump to page after a short delay to ensure PDF is loaded
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           _pdfController.jumpToPage(page);
         }

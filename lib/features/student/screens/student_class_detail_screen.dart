@@ -3,13 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models.dart';
 import '../../../core/providers/app_state.dart';
-import '../../../core/services/cloudinary_service.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'student_test_detail_screen.dart';
+import 'student_class_detail_materials_tab.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Student Class Detail Screen — 3 tabs: Members · Tests · Materials
@@ -162,7 +161,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                 children: [
                   _MembersTab(cls: cls),
                   _StudentTestsTab(cls: cls),
-                  _StudentMaterialsTab(cls: cls),
+                  StudentMaterialsTab(cls: cls),
                 ],
               ),
             ),
@@ -552,168 +551,3 @@ class _StudentTestsTab extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab 2 — Materials (read-only, view in-app only)
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _StudentMaterialsTab extends StatelessWidget {
-  final ClassModel cls;
-  const _StudentMaterialsTab({required this.cls});
-
-  IconData _typeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'pdf':    return Icons.picture_as_pdf_rounded;
-      case 'image':  return Icons.image_rounded;
-      case 'doc':    return Icons.description_rounded;
-      case 'link':   return Icons.link_rounded;
-      default:       return Icons.insert_drive_file_rounded;
-    }
-  }
-
-  Color _typeColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'pdf':   return const Color(0xFFEF4444);
-      case 'image': return const Color(0xFF8B5CF6);
-      case 'doc':   return const Color(0xFF3B82F6);
-      case 'link':  return const Color(0xFF10B981);
-      default:      return AppColors.textMuted;
-    }
-  }
-
-  String _formatSize(int bytes) {
-    if (bytes == 0) return '';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
-  Future<void> _openMaterial(
-      BuildContext context, Map<String, dynamic> material) async {
-    final url = material['url'] as String?;
-    if (url == null || url.isEmpty) {
-      _snack(context, 'No URL available', isError: true);
-      return;
-    }
-    try {
-      final launched =
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      if (!launched && context.mounted) {
-        _snack(context, 'Cannot open this file', isError: true);
-      }
-    } catch (e) {
-      if (context.mounted) _snack(context, 'Error: $e', isError: true);
-    }
-  }
-
-  void _snack(BuildContext context, String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.poppins(color: Colors.white)),
-      backgroundColor: isError ? AppColors.error : AppColors.success,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cloudinary = CloudinaryService();
-
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: cloudinary.materialsStream(cls.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary));
-        }
-
-        final materials = snapshot.data ?? [];
-
-        if (materials.isEmpty) {
-          return Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Symbols.folder_open,
-                  color: AppColors.textMuted, size: 52),
-              const SizedBox(height: 12),
-              Text('No materials yet',
-                  style: GoogleFonts.poppins(
-                      color: AppColors.textSecondary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text('Your teacher hasn\'t uploaded any materials yet',
-                  style: GoogleFonts.poppins(
-                      color: AppColors.textMuted, fontSize: 13),
-                  textAlign: TextAlign.center),
-            ]),
-          );
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-          itemCount: materials.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) {
-            final m = materials[i];
-            final type = (m['type'] as String? ?? '').toLowerCase();
-            final icon = _typeIcon(type);
-            final color = _typeColor(type);
-            final size = _formatSize(m['sizeBytes'] as int? ?? 0);
-            final name = m['name'] as String? ?? 'Untitled';
-            final subject = m['subject'] as String? ?? '';
-
-            return GestureDetector(
-              onTap: () => _openMaterial(context, m),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.13),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(icon, color: color, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(name,
-                          style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 2),
-                      Text(
-                        [
-                          if (subject.isNotEmpty) subject,
-                          type.toUpperCase(),
-                          if (size.isNotEmpty) size,
-                        ].join('  •  '),
-                        style: GoogleFonts.poppins(
-                            color: AppColors.textSecondary, fontSize: 12),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    type == 'link'
-                        ? Symbols.open_in_new
-                        : Symbols.open_in_new,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                ]),
-              ).animate().fadeIn(delay: (i * 50).ms),
-            );
-          },
-        );
-      },
-    );
-  }
-}
